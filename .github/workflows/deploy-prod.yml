@@ -81,11 +81,18 @@ jobs:
     name: Purge Cloudflare cache
     needs: deploy
     runs-on: ubuntu-latest
-    if: ${{ secrets.CF_ZONE_ID != '' }}
+    env:
+      CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+      CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
     steps:
-      - run: |
-          curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/${{ secrets.CF_ZONE_ID }}/purge_cache" \
-            -H "Authorization: Bearer ${{ secrets.CF_API_TOKEN }}" \
+      - name: Purge cache (skip if secrets missing)
+        run: |
+          if [ -z "$CF_ZONE_ID" ] || [ -z "$CF_API_TOKEN" ]; then
+            echo "Cloudflare secrets missing, skipping cache purge"
+            exit 0
+          fi
+          curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/purge_cache" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
             -H "Content-Type: application/json" \
             --data '{"purge_everything":true}'
 
