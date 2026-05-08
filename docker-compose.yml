@@ -1,0 +1,199 @@
+version: '3.8'
+
+services:
+  # ─── MongoDB ───────────────────────────────────────────
+  sallycards-mongo:
+    image: mongo:7.0
+    container_name: sallycards-mongo
+    restart: unless-stopped
+    ports:
+      - '${MONGO_PORT:-27017}:27017'
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-sallycards}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-sallycards_dev}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-sallycards}
+    volumes:
+      - mongo-data:/data/db
+      - ./docker/mongo/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - sallycards-network
+
+  # ─── Redis ─────────────────────────────────────────────
+  sallycards-redis:
+    image: redis:7.2-alpine
+    container_name: sallycards-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - sallycards-network
+
+  # ─── NestJS API ────────────────────────────────────────
+  sallycards-api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: sallycards-api
+    restart: unless-stopped
+    ports:
+      - '${API_PORT:-3000}:3000'
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      MONGODB_URI: mongodb://${MONGO_USER:-sallycards}:${MONGO_PASSWORD:-sallycards_dev}@sallycards-mongo:27017/${MONGO_DB:-sallycards}?authSource=admin
+      REDIS_URL: redis://sallycards-redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_in_prod}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev_refresh_secret_change_in_prod}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+    depends_on:
+      sallycards-mongo:
+        condition: service_healthy
+      sallycards-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/v1/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - sallycards-network
+
+  # ─── Socket.IO Server ─────────────────────────────────
+  sallycards-socket:
+    build:
+      context: .
+      dockerfile: docker/socket.Dockerfile
+    container_name: sallycards-socket
+    restart: unless-stopped
+    ports:
+      - '${SOCKET_PORT:-3001}:3001'
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3001
+      REDIS_URL: redis://sallycards-redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_change_in_prod}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:4000,http://localhost:8081}
+    depends_on:
+      sallycards-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - sallycards-network
+
+  # ─── Next.js Web ───────────────────────────────────────
+  sallycards-web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    container_name: sallycards-web
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-4000}:3000'
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3000/api/v1}
+      NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL:-http://localhost:3001}
+    depends_on:
+      - sallycards-api
+      - sallycards-socket
+    networks:
+      - sallycards-network
+
+  # ─── WebRTC TURN Server (Coturn) ──────────────────────
+  sallycards-turn:
+    image: coturn/coturn:4.6
+    container_name: sallycards-turn
+    restart: unless-stopped
+    ports:
+      - '3478:3478/udp'
+      - '3478:3478/tcp'
+    volumes:
+      - ./docker/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    networks:
+      - sallycards-network
+
+  # ─── Nginx Reverse Proxy ──────────────────────────────
+  sallycards-nginx:
+    image: nginx:1.27-alpine
+    container_name: sallycards-nginx
+    restart: unless-stopped
+    ports:
+      - '${HTTP_PORT:-80}:80'
+      - '${HTTPS_PORT:-443}:443'
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - sallycards-api
+      - sallycards-socket
+      - sallycards-web
+    networks:
+      - sallycards-network
+
+  # ─── Dev Tools ─────────────────────────────────────────
+  mongo-express:
+    image: mongo-express:1.0
+    container_name: sallycards-mongo-express
+    restart: unless-stopped
+    ports:
+      - '8083:8081'
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER:-sallycards}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-sallycards_dev}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER:-sallycards}:${MONGO_PASSWORD:-sallycards_dev}@sallycards-mongo:27017/
+      ME_CONFIG_BASICAUTH: 'false'
+    depends_on:
+      sallycards-mongo:
+        condition: service_healthy
+    profiles:
+      - dev
+    networks:
+      - sallycards-network
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: sallycards-redis-commander
+    restart: unless-stopped
+    ports:
+      - '8082:8081'
+    environment:
+      REDIS_HOSTS: local:sallycards-redis:6379
+    depends_on:
+      sallycards-redis:
+        condition: service_healthy
+    profiles:
+      - dev
+    networks:
+      - sallycards-network
+
+volumes:
+  mongo-data:
+    name: sallycards-mongo-data
+  redis-data:
+    name: sallycards-redis-data
+
+networks:
+  sallycards-network:
+    name: sallycards-network
+    driver: bridge

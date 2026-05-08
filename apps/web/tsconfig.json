@@ -1,0 +1,35 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./app/*"],
+      "@sally/types": ["../../libs/shared/types/src/index.ts"],
+      "@sally/game-engine": ["../../libs/game-engine/src/index.ts"],
+      "@sally/ui": ["../../libs/ui/src/index.ts"],
+      "@sally/card-assets": ["../../libs/card-assets/src/index.ts"],
+      "@sally/i18n": ["../../libs/i18n/src/index.ts"],
+      "@sally/networking": ["../../libs/networking/src/index.ts"],
+      "@sally/ai": ["../../libs/ai/src/index.ts"],
+      "@sally/auth": ["../../libs/auth/src/index.ts"],
+      "@sally/audio": ["../../libs/audio/src/index.ts"],
+      "@sally/storage": ["../../libs/storage/src/index.ts"],
+      "@sally/social": ["../../libs/social/src/index.ts"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

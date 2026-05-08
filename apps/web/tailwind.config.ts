@@ -1,0 +1,91 @@
+import type { Config } from 'tailwindcss';
+
+const config: Config = {
+  content: [
+    './app/**/*.{ts,tsx}',
+    './components/**/*.{ts,tsx}',
+  ],
+  theme: {
+    extend: {
+      colors: {
+        primary: {
+          DEFAULT: '#1E3A5F',
+          50: '#E8EDF3',
+          100: '#C5D1E2',
+          200: '#9FB3CC',
+          300: '#7995B6',
+          400: '#5C7EA5',
+          500: '#1E3A5F',
+          600: '#1A3355',
+          700: '#152A47',
+          800: '#102139',
+          900: '#0A1929',
+        },
+        accent: {
+          DEFAULT: '#C9A84C',
+          50: '#FAF5E8',
+          100: '#F2E7C5',
+          200: '#E8D69F',
+          300: '#DEC578',
+          400: '#D4B65E',
+          500: '#C9A84C',
+          600: '#B89540',
+          700: '#9C7D36',
+          800: '#80662C',
+          900: '#644F22',
+        },
+        success: {
+          DEFAULT: '#2E7D52',
+          50: '#E6F2EC',
+          100: '#C0DFD0',
+          200: '#97CBB2',
+          300: '#6DB793',
+          400: '#4EA87D',
+          500: '#2E7D52',
+          600: '#28704A',
+          700: '#215F3F',
+          800: '#1A4E34',
+          900: '#133D29',
+        },
+        error: {
+          DEFAULT: '#C62828',
+          50: '#FCEAEA',
+          100: '#F7C9C9',
+          200: '#F1A5A5',
+          300: '#EB8181',
+          400: '#E66666',
+          500: '#C62828',
+          600: '#B22424',
+          700: '#961E1E',
+          800: '#7A1919',
+          900: '#5E1313',
+        },
+        surface: {
+          DEFAULT: '#F8F5F0',
+          50: '#FFFFFF',
+          100: '#FDFCFA',
+          200: '#F8F5F0',
+          300: '#EDE8DF',
+          400: '#E2DBCE',
+          500: '#D7CEBD',
+        },
+        background: {
+          DEFAULT: '#0A1929',
+          50: '#1E3A5F',
+          100: '#152A47',
+          200: '#102139',
+          300: '#0A1929',
+          400: '#071221',
+          500: '#040C18',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        arabic: ['Cairo', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+};
+
+export default config;

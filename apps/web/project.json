@@ -1,0 +1,29 @@
+{
+  "name": "web",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/web",
+  "projectType": "application",
+  "targets": {
+    "dev": {
+      "command": "next dev -p 4000",
+      "options": {
+        "cwd": "apps/web"
+      }
+    },
+    "build": {
+      "command": "next build",
+      "options": {
+        "cwd": "apps/web"
+      },
+      "dependsOn": ["^build"]
+    },
+    "start": {
+      "command": "next start -p 4000",
+      "options": {
+        "cwd": "apps/web"
+      },
+      "dependsOn": ["build"]
+    }
+  },
+  "tags": ["scope:web", "type:app"]
+}

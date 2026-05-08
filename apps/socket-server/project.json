@@ -1,0 +1,27 @@
+{
+  "name": "socket-server",
+  "sourceRoot": "apps/socket-server/src",
+  "projectType": "application",
+  "targets": {
+    "serve": {
+      "executor": "@nx/js:node",
+      "options": {
+        "buildTarget": "socket-server:build"
+      }
+    },
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/apps/socket-server",
+        "main": "apps/socket-server/src/main.ts",
+        "tsConfig": "apps/socket-server/tsconfig.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "apps/socket-server/jest.config.ts"
+      }
+    }
+  }
+}

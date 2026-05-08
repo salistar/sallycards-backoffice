@@ -1,0 +1,23 @@
+<svg width="200" height="280" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg">
+  <!-- Card background -->
+  <rect width="200" height="280" fill="#b91c1c" stroke="#999" stroke-width="2" rx="8"/>
+  
+  <!-- Geometric pattern -->
+  <defs>
+    <pattern id="pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect width="40" height="40" fill="#b91c1c"/>
+      <circle cx="10" cy="10" r="3" fill="#ef4444"/>
+      <circle cx="30" cy="30" r="3" fill="#ef4444"/>
+      <rect x="15" y="15" width="10" height="10" fill="none" stroke="#ef4444" stroke-width="1"/>
+    </pattern>
+  </defs>
+  
+  <rect width="200" height="280" fill="url(#pattern)"/>
+  
+  <!-- Border -->
+  <rect x="10" y="10" width="180" height="260" fill="none" stroke="#ef4444" stroke-width="2" rx="6"/>
+  
+  <!-- Center decorative element -->
+  <circle cx="100" cy="140" r="30" fill="none" stroke="#ef4444" stroke-width="2" opacity="0.5"/>
+  <circle cx="100" cy="140" r="20" fill="none" stroke="#ef4444" stroke-width="1" opacity="0.5"/>
+</svg>

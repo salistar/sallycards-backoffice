@@ -1,0 +1,29 @@
+{
+  "name": "sallycards-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "cross-env NODE_OPTIONS='--max-old-space-size=4096' next dev -p 4000",
+    "build": "next build",
+    "start": "next start -p 4000"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "autoprefixer": "^10.4.27",
+    "i18next": "^24.0.0",
+    "lucide-react": "^1.7.0",
+    "next": "^15.0.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-i18next": "^15.0.0",
+    "recharts": "^2.12.0",
+    "socket.io-client": "^4.7.0",
+    "tailwindcss": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "cross-env": "^10.1.0",
+    "typescript": "^5.9.0"
+  }
+}

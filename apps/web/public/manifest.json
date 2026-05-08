@@ -1,0 +1,22 @@
+{
+  "name": "SallyCards Solitaire",
+  "short_name": "Solitaire",
+  "description": "13 variantes de Solitaire, deals solubles, solveur AI.",
+  "start_url": "/solitaire",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#0EA5E9",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/cards/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/cards/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

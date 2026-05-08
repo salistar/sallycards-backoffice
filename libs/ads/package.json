@@ -1,0 +1,17 @@
+{
+  "name": "@sallycards/ads",
+  "version": "1.0.0",
+  "description": "Shared advertising library for SallyCards mobile apps",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "private": true,
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-native": ">=0.73.0",
+    "react-native-google-mobile-ads": ">=14.0.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.4.0",
+    "@types/react": "~18.2.0"
+  }
+}

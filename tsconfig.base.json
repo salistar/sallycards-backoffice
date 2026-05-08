@@ -1,0 +1,40 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "node",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2022",
+    "module": "es2022",
+    "lib": ["es2022", "dom"],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
+    "paths": {
+      "@sally/types": ["libs/shared/types/src/index.ts"],
+      "@sally/game-engine": ["libs/game-engine/src/index.ts"],
+      "@sally/ui": ["libs/ui/src/index.ts"],
+      "@sally/card-assets": ["libs/card-assets/src/index.ts"],
+      "@sally/i18n": ["libs/i18n/src/index.ts"],
+      "@sally/networking": ["libs/networking/src/index.ts"],
+      "@sally/ai": ["libs/ai/src/index.ts"],
+      "@sally/auth": ["libs/auth/src/index.ts"],
+      "@sally/audio": ["libs/audio/src/index.ts"],
+      "@sally/storage": ["libs/storage/src/index.ts"],
+      "@sally/social": ["libs/social/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules", "tmp"]
+}
