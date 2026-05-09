@@ -85,19 +85,37 @@ services:
         max-file: '2'
 
   # ─── Redis Commander (admin web UI) ────────────────────────
-  # Activé en prod, exposé via Cloudflare Tunnel sur redis.salistar.com
-  # Auth via env vars (HTTP_USER/HTTP_PASSWORD sont lus par entrypoint.sh
-  # de l'image et convertis en flags CLI redis-commander)
+  # Container interne uniquement, pas exposé directement.
+  # L'accès passe par redis-auth-proxy (nginx + basic auth) ci-dessous.
   redis-commander:
     profiles: !reset []
-    ports: !override
-      - '127.0.0.1:8082:8081'
+    ports: !override []
     environment:
       REDIS_HOSTS: local:sallycards-redis:6379
       REDIS_HOST: sallycards-redis
       REDIS_PORT: 6379
-      HTTP_USER: ${REDIS_COMMANDER_USER}
-      HTTP_PASSWORD: ${REDIS_COMMANDER_PASSWORD}
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '2'
+
+  # ─── Redis Auth Proxy (nginx basic auth devant redis-commander) ────
+  # Expose redis-commander avec une vraie basic auth http via nginx
+  redis-auth-proxy:
+    image: ghcr.io/salistar/sallycards-redis-auth-proxy:latest
+    container_name: sallycards-redis-auth-proxy
+    pull_policy: always
+    ports:
+      - '127.0.0.1:8082:80'
+    environment:
+      HTPASSWD_USER: ${REDIS_COMMANDER_USER}
+      HTPASSWD_PASSWORD: ${REDIS_COMMANDER_PASSWORD}
+    depends_on:
+      - redis-commander
+    networks:
+      - sallycards-network
     restart: always
     logging:
       driver: json-file

@@ -9,6 +9,7 @@ on:
       - 'apps/web/**'
       - 'libs/**'
       - 'docker/**'
+      - 'docker/redis-auth-proxy/**'
       - 'docker-compose.yml'
       - 'docker-compose.prod.yml'
       - 'package.json'
@@ -30,7 +31,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [api, socket, web]
+        include:
+          - service: api
+            context: .
+            dockerfile: docker/api.Dockerfile
+          - service: socket
+            context: .
+            dockerfile: docker/socket.Dockerfile
+          - service: web
+            context: .
+            dockerfile: docker/web.Dockerfile
+          - service: redis-auth-proxy
+            context: docker/redis-auth-proxy
+            dockerfile: docker/redis-auth-proxy/Dockerfile
     steps:
       - uses: actions/checkout@v4
 
@@ -48,8 +61,8 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: .
-          file: docker/${{ matrix.service }}.Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ steps.owner.outputs.lower }}/sallycards-${{ matrix.service }}:latest
