@@ -58,7 +58,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
   deploy:
-    name: Deploy to Hetzner VPS
+    name: Deploy 5-service stack to Hetzner VPS
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -69,13 +69,31 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script_stop: true
           script: |
+            set -e
             cd ~/apps/sallycards-backoffice
+
+            echo "==> Sync code from GitHub"
             git fetch --all
             git reset --hard origin/main
+
+            echo "==> Login to ghcr.io"
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+            echo "==> Pull all 5 service images (api, socket, web from ghcr.io + mongo, redis from Docker Hub)"
             docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml pull
+
+            echo "==> Bring up complete stack (mongo + redis + api + socket + web)"
             docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans
+
+            echo "==> Wait for healthchecks"
+            sleep 15
+            docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml ps
+
+            echo "==> Cleanup unused images (keep last 72h)"
             docker image prune -af --filter "until=72h"
+
+            echo "==> Final state"
+            docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml ps --format json | head -20
 
   cloudflare-purge:
     name: Purge Cloudflare cache

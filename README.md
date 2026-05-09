@@ -4,15 +4,26 @@ Stack back-office pour SallyCards : 11 jeux de cartes mobiles (Belote, Concentra
 
 [![Deploy Status](https://github.com/salistar/sallycards-backoffice/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/salistar/sallycards-backoffice/actions/workflows/deploy-prod.yml)
 
-## Stack
+## Stack — 5 services déployés via GitHub Actions
 
-| Composant | Tech | Port interne | URL publique |
-|---|---|---|---|
-| API REST | NestJS 11 + MongoDB + JWT | 3000 | https://api.salistar.com/api/v1 |
-| WebSocket | NestJS + Socket.IO + Redis adapter | 3001 | https://ws.salistar.com |
-| Web | Next.js 15 + React 19 + Tailwind 4 | 4000 | https://sallycards.salistar.com |
-| Database | MongoDB 7 | 27017 | (interne) |
-| Cache + PubSub | Redis 7 | 6379 | (interne) |
+| # | Composant | Image / Source | Port interne | Pipeline | URL publique |
+|---|---|---|---|---|---|
+| 1 | **API REST** | NestJS 11 — `ghcr.io/salistar/sallycards-api:latest` (build GHA) | 3000 | ✅ build + deploy | https://api.salistar.com/api/v1 |
+| 2 | **WebSocket** | NestJS + Socket.IO — `ghcr.io/salistar/sallycards-socket:latest` (build GHA) | 3001 | ✅ build + deploy | https://ws.salistar.com |
+| 3 | **Web** | Next.js 15 + React 19 — `ghcr.io/salistar/sallycards-web:latest` (build GHA) | 4000 | ✅ build + deploy | https://sallycards.salistar.com |
+| 4 | **MongoDB** | `mongo:7.0` (image Docker Hub officielle) | 27017 | ✅ pull + deploy | _interne_ (bind 127.0.0.1) |
+| 5 | **Redis** | `redis:7.2-alpine` (image Docker Hub officielle) | 6379 | ✅ pull + deploy | _interne_ (bind 127.0.0.1) |
+
+> 💡 **Tous les 5 services** passent par `.github/workflows/deploy-prod.yml`. Les 3 premiers sont **build** sur les runners GitHub puis pushés sur `ghcr.io`. Les 2 derniers (mongo, redis) sont **pull** des images officielles Docker Hub directement par le job `deploy` qui exécute `docker compose pull && up -d` sur le VPS.
+
+## Conteneurs explicitement exclus de la prod
+
+| Container | Raison |
+|---|---|
+| `sallycards-nginx` | Remplacé par Cloudflare Tunnel (zéro port HTTP/S exposé) |
+| `sallycards-turn` | TURN/STUN déployé séparément sur un autre VPS dédié WebRTC |
+| `mongo-express` | Outil de dev (profile `dev`), accessible uniquement via SSH tunnel |
+| `redis-commander` | Outil de dev (profile `dev`), accessible uniquement via SSH tunnel |
 
 ## Infrastructure
 
@@ -66,33 +77,39 @@ Stack back-office pour SallyCards : 11 jeux de cartes mobiles (Belote, Concentra
        └──────────────────────────┘
 ```
 
-## Pipeline CI/CD
+## Pipeline CI/CD — déploiement complet de tous les conteneurs
 
 ```
 git push origin main
    │
    ▼ (.github/workflows/deploy-prod.yml)
-┌──────────────────────────────────────┐
-│ GitHub Actions                       │
-├──────────────────────────────────────┤
-│ Job 1: build (matrix: api/socket/web)│
-│   - Docker buildx avec cache GHA     │
-│   - Push vers ghcr.io                │
-├──────────────────────────────────────┤
-│ Job 2: deploy                        │
-│   - SSH vers VPS                     │
-│   - docker compose pull && up -d     │
-│   - docker image prune               │
-├──────────────────────────────────────┤
-│ Job 3: cloudflare-purge              │
-│   - curl POST /purge_cache           │
-├──────────────────────────────────────┤
-│ Job 4: health-check                  │
-│   - curl api / ws / web              │
-└──────────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│ GitHub Actions                                         │
+├────────────────────────────────────────────────────────┤
+│ Job 1: build [matrix: api / socket / web]              │
+│   - Docker buildx multi-stage avec cache GHA           │
+│   - Push 3 images vers ghcr.io/salistar/sallycards-*   │
+├────────────────────────────────────────────────────────┤
+│ Job 2: deploy (5-service stack)                        │
+│   - SSH vers Hetzner VPS                               │
+│   - git fetch + reset --hard origin/main               │
+│   - docker login ghcr.io                               │
+│   - docker compose pull (api+socket+web depuis ghcr.io,│
+│                          mongo+redis depuis Docker Hub)│
+│   - docker compose up -d --remove-orphans              │
+│     -> démarre les 5 conteneurs avec healthchecks      │
+│   - docker image prune                                 │
+├────────────────────────────────────────────────────────┤
+│ Job 3: cloudflare-purge                                │
+│   - curl POST /purge_cache (vide CDN)                  │
+├────────────────────────────────────────────────────────┤
+│ Job 4: health-check                                    │
+│   - curl api.salistar.com / ws.salistar.com / web      │
+└────────────────────────────────────────────────────────┘
    │
    ▼ ~5 min après le push
-✅ Live en production
+✅ Les 5 conteneurs (mongo + redis + api + socket + web)
+   tournent dans Docker sur le VPS Hetzner
 ```
 
 ## Développement local
