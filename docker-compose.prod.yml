@@ -86,21 +86,18 @@ services:
 
   # ─── Redis Commander (admin web UI) ────────────────────────
   # Activé en prod, exposé via Cloudflare Tunnel sur redis.salistar.com
-  # Note : env vars HTTP_USER/HTTP_PASSWORD ignorées dans cette image,
-  # on passe l'auth via command line
+  # Auth via env vars (HTTP_USER/HTTP_PASSWORD sont lus par entrypoint.sh
+  # de l'image et convertis en flags CLI redis-commander)
   redis-commander:
     profiles: !reset []
     ports: !override
       - '127.0.0.1:8082:8081'
     environment:
       REDIS_HOSTS: local:sallycards-redis:6379
-    command:
-      - --redis-host
-      - sallycards-redis
-      - --http-auth-username
-      - ${REDIS_COMMANDER_USER}
-      - --http-auth-password
-      - ${REDIS_COMMANDER_PASSWORD}
+      REDIS_HOST: sallycards-redis
+      REDIS_PORT: 6379
+      HTTP_USER: ${REDIS_COMMANDER_USER}
+      HTTP_PASSWORD: ${REDIS_COMMANDER_PASSWORD}
     restart: always
     logging:
       driver: json-file
