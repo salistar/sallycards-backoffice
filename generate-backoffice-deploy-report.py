@@ -94,7 +94,7 @@ story.append(PageBreak())
 story.append(Paragraph("Sommaire", h1))
 toc = [
     "1. Architecture de la stack",
-    "2. Inventaire complet des 7 conteneurs (tous via GHA)",
+    "2. Inventaire complet des 8 conteneurs (tous via GHA)",
     "3. URLs publiques et services exposes",
     "4. Couts et recap",
     "5. Etape 1 — Domaine Cloudflare Registrar",
@@ -184,7 +184,7 @@ for title, desc in arch_choices:
 
 # ===== 2. Inventaire des 5 conteneurs =====
 story.append(PageBreak())
-story.append(Paragraph("2. Inventaire complet des 7 conteneurs (tous via GHA)", h1))
+story.append(Paragraph("2. Inventaire complet des 8 conteneurs (tous via GHA)", h1))
 
 story.append(Paragraph(
     "Chaque conteneur de la stack passe par le pipeline GitHub Actions, soit en "
@@ -197,13 +197,14 @@ story.append(Spacer(1, 0.2*cm))
 
 containers_data = [
     ["#", "Container", "Image / Source", "Port int.", "Pipeline GHA", "URL"],
-    ["1", "sallycards-api",       "ghcr.io/salistar/sallycards-api:latest",       "3000",  "build + push + deploy",  "api.salistar.com"],
-    ["2", "sallycards-socket",    "ghcr.io/salistar/sallycards-socket:latest",    "3001",  "build + push + deploy",  "ws.salistar.com"],
-    ["3", "sallycards-web",       "ghcr.io/salistar/sallycards-web:latest",       "3000",  "build + push + deploy",  "sallycards.salistar.com"],
-    ["4", "sallycards-mongo",     "mongo:7.0",                                     "27017", "pull + deploy",          "(interne)"],
-    ["5", "sallycards-redis",     "redis:7.2-alpine",                              "6379",  "pull + deploy",          "(interne)"],
-    ["6", "mongo-express",        "mongo-express:1.0\n(admin UI + basic auth)",   "8081",  "pull + deploy",          "mongo.salistar.com"],
-    ["7", "redis-commander",      "rediscommander/redis-commander\n(admin UI + basic auth)", "8081", "pull + deploy",   "redis.salistar.com"],
+    ["1", "sallycards-api",       "ghcr.io/.../sallycards-api:latest",        "3000",  "build + push",  "api.salistar.com"],
+    ["2", "sallycards-socket",    "ghcr.io/.../sallycards-socket:latest",     "3001",  "build + push",  "ws.salistar.com"],
+    ["3", "sallycards-web",       "ghcr.io/.../sallycards-web:latest",        "3000",  "build + push",  "sallycards.salistar.com"],
+    ["4", "sallycards-mongo",     "mongo:7.0",                                  "27017", "pull",          "(interne)"],
+    ["5", "sallycards-redis",     "redis:7.2-alpine",                           "6379",  "pull",          "(interne)"],
+    ["6", "mongo-express",        "mongo-express:1.0\nadmin UI + basic auth",  "8081",  "pull",          "mongo.salistar.com"],
+    ["7", "redis-commander",      "rediscommander/redis-commander",            "8081",  "pull",          "(interne reseau Docker)"],
+    ["8", "redis-auth-proxy",     "ghcr.io/.../sallycards-redis-auth-proxy\nnginx + basic auth", "80", "build + push", "redis.salistar.com"],
 ]
 t = Table(containers_data, colWidths=[0.6*cm, 3*cm, 4.8*cm, 1.4*cm, 3.2*cm, 3*cm])
 t.setStyle(TableStyle([
@@ -251,7 +252,7 @@ story.append(t)
 story.append(Spacer(1, 0.3*cm))
 story.append(ok(
     "<b>Verification</b> : sur le VPS, <code>docker compose ps</code> doit montrer "
-    "<b>exactement 7 containers</b> tous en statut <i>Up (healthy)</i>. Si un container "
+    "<b>exactement 8 containers</b> tous en statut <i>Up (healthy)</i>. Si un container "
     "manque, le pipeline GHA le redemarrera automatiquement au prochain push, ou via "
     "<i>docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d</i>."
 ))

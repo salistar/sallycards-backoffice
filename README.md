@@ -4,17 +4,18 @@ Stack back-office pour SallyCards : 11 jeux de cartes mobiles (Belote, Concentra
 
 [![Deploy Status](https://github.com/salistar/sallycards-backoffice/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/salistar/sallycards-backoffice/actions/workflows/deploy-prod.yml)
 
-## Stack — 7 services déployés via GitHub Actions
+## Stack — 8 services déployés via GitHub Actions
 
-| # | Composant | Image / Source | Port interne | Pipeline | URL publique |
+| # | Composant | Image / Source | Port int. | Pipeline | URL publique |
 |---|---|---|---|---|---|
-| 1 | **API REST** | NestJS 11 — `ghcr.io/salistar/sallycards-api:latest` (build GHA) | 3000 | ✅ build + deploy | https://api.salistar.com/api/v1 |
-| 2 | **WebSocket** | NestJS + Socket.IO — `ghcr.io/salistar/sallycards-socket:latest` (build GHA) | 3001 | ✅ build + deploy | https://ws.salistar.com |
-| 3 | **Web** | Next.js 15 + React 19 — `ghcr.io/salistar/sallycards-web:latest` (build GHA) | 4000 | ✅ build + deploy | https://sallycards.salistar.com |
-| 4 | **MongoDB** | `mongo:7.0` (image Docker Hub officielle) | 27017 | ✅ pull + deploy | _interne_ (bind 127.0.0.1) |
-| 5 | **Redis** | `redis:7.2-alpine` (image Docker Hub officielle) | 6379 | ✅ pull + deploy | _interne_ (bind 127.0.0.1) |
-| 6 | **Mongo Express** | `mongo-express:1.0` — UI admin MongoDB avec basic auth | 8081 | ✅ pull + deploy | https://mongo.salistar.com 🔒 |
-| 7 | **Redis Commander** | `rediscommander/redis-commander` — UI admin Redis avec basic auth | 8081 | ✅ pull + deploy | https://redis.salistar.com 🔒 |
+| 1 | **API REST** | NestJS 11 — `ghcr.io/salistar/sallycards-api:latest` (build GHA) | 3000 | ✅ build + push | https://api.salistar.com/api/v1 |
+| 2 | **WebSocket** | NestJS + Socket.IO — `ghcr.io/salistar/sallycards-socket:latest` (build GHA) | 3001 | ✅ build + push | https://ws.salistar.com |
+| 3 | **Web** | Next.js 15 + React 19 — `ghcr.io/salistar/sallycards-web:latest` (build GHA) | 4000 | ✅ build + push | https://sallycards.salistar.com |
+| 4 | **MongoDB** | `mongo:7.0` (image Docker Hub officielle) | 27017 | ✅ pull | _interne_ |
+| 5 | **Redis** | `redis:7.2-alpine` (image Docker Hub officielle) | 6379 | ✅ pull | _interne_ |
+| 6 | **Mongo Express** | `mongo-express:1.0` — UI admin MongoDB | 8081 | ✅ pull | https://mongo.salistar.com 🔒 |
+| 7 | **Redis Commander** | `rediscommander/redis-commander` — UI admin Redis | 8081 | ✅ pull | _interne_ (réseau Docker) |
+| 8 | **Redis Auth Proxy** | `ghcr.io/salistar/sallycards-redis-auth-proxy:latest` — nginx + basic auth devant redis-commander (build GHA) | 80 | ✅ build + push | https://redis.salistar.com 🔒 |
 
 > 💡 **Tous les 5 services** passent par `.github/workflows/deploy-prod.yml`. Les 3 premiers sont **build** sur les runners GitHub puis pushés sur `ghcr.io`. Les 2 derniers (mongo, redis) sont **pull** des images officielles Docker Hub directement par le job `deploy` qui exécute `docker compose pull && up -d` sur le VPS.
 
