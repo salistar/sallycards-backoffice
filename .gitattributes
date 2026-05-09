@@ -1,0 +1,12 @@
+# Force LF line endings for shell scripts (otherwise CRLF breaks shebang in Linux containers)
+*.sh text eol=lf
+
+# Also for compose, dockerfile, yaml
+docker-compose*.yml text eol=lf
+*.Dockerfile text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# PDFs as binary
+*.pdf binary
