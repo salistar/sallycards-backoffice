@@ -4,7 +4,7 @@ Stack back-office pour SallyCards : 11 jeux de cartes mobiles (Belote, Concentra
 
 [![Deploy Status](https://github.com/salistar/sallycards-backoffice/actions/workflows/deploy-prod.yml/badge.svg)](https://github.com/salistar/sallycards-backoffice/actions/workflows/deploy-prod.yml)
 
-## Stack — 5 services déployés via GitHub Actions
+## Stack — 7 services déployés via GitHub Actions
 
 | # | Composant | Image / Source | Port interne | Pipeline | URL publique |
 |---|---|---|---|---|---|
@@ -13,8 +13,23 @@ Stack back-office pour SallyCards : 11 jeux de cartes mobiles (Belote, Concentra
 | 3 | **Web** | Next.js 15 + React 19 — `ghcr.io/salistar/sallycards-web:latest` (build GHA) | 4000 | ✅ build + deploy | https://sallycards.salistar.com |
 | 4 | **MongoDB** | `mongo:7.0` (image Docker Hub officielle) | 27017 | ✅ pull + deploy | _interne_ (bind 127.0.0.1) |
 | 5 | **Redis** | `redis:7.2-alpine` (image Docker Hub officielle) | 6379 | ✅ pull + deploy | _interne_ (bind 127.0.0.1) |
+| 6 | **Mongo Express** | `mongo-express:1.0` — UI admin MongoDB avec basic auth | 8081 | ✅ pull + deploy | https://mongo.salistar.com 🔒 |
+| 7 | **Redis Commander** | `rediscommander/redis-commander` — UI admin Redis avec basic auth | 8081 | ✅ pull + deploy | https://redis.salistar.com 🔒 |
 
 > 💡 **Tous les 5 services** passent par `.github/workflows/deploy-prod.yml`. Les 3 premiers sont **build** sur les runners GitHub puis pushés sur `ghcr.io`. Les 2 derniers (mongo, redis) sont **pull** des images officielles Docker Hub directement par le job `deploy` qui exécute `docker compose pull && up -d` sur le VPS.
+
+## Accès admin DB (interfaces web protégées)
+
+| URL | Outil | Auth |
+|---|---|---|
+| https://mongo.salistar.com | mongo-express — explorer/éditer collections MongoDB | Basic Auth (user `admin` + password généré) |
+| https://redis.salistar.com | redis-commander — explorer/éditer keys Redis | Basic Auth (user `admin` + password généré) |
+
+> 🔒 **Sécurité** : ces 2 URLs sont protégées par double couche :
+> 1. Cloudflare WAF + DDoS protection (gratuit)
+> 2. HTTP Basic Auth (credentials dans `.env.production` chmod 600 sur le VPS)
+>
+> Pour récupérer le password : `ssh deploy@91.99.70.43 'grep -E "(MONGO_EXPRESS|REDIS_COMMANDER)_PASSWORD" ~/apps/sallycards-backoffice/.env.production'`
 
 ## Conteneurs explicitement exclus de la prod
 
@@ -22,8 +37,6 @@ Stack back-office pour SallyCards : 11 jeux de cartes mobiles (Belote, Concentra
 |---|---|
 | `sallycards-nginx` | Remplacé par Cloudflare Tunnel (zéro port HTTP/S exposé) |
 | `sallycards-turn` | TURN/STUN déployé séparément sur un autre VPS dédié WebRTC |
-| `mongo-express` | Outil de dev (profile `dev`), accessible uniquement via SSH tunnel |
-| `redis-commander` | Outil de dev (profile `dev`), accessible uniquement via SSH tunnel |
 
 ## Infrastructure
 

@@ -61,3 +61,42 @@ services:
 
   sallycards-turn:
     profiles: ['never']
+
+  # ─── Mongo Express (admin web UI) ──────────────────────────
+  # Activé en prod, exposé via Cloudflare Tunnel sur mongo.salistar.com
+  # avec auth Basic + protection Cloudflare WAF
+  mongo-express:
+    profiles: !reset []
+    ports: !override
+      - '127.0.0.1:8083:8081'
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD}
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@sallycards-mongo:27017/
+      ME_CONFIG_BASICAUTH: 'true'
+      ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USER}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD}
+      ME_CONFIG_SITE_BASEURL: '/'
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '2'
+
+  # ─── Redis Commander (admin web UI) ────────────────────────
+  # Activé en prod, exposé via Cloudflare Tunnel sur redis.salistar.com
+  redis-commander:
+    profiles: !reset []
+    ports: !override
+      - '127.0.0.1:8082:8081'
+    environment:
+      REDIS_HOSTS: local:sallycards-redis:6379
+      HTTP_USER: ${REDIS_COMMANDER_USER}
+      HTTP_PASSWORD: ${REDIS_COMMANDER_PASSWORD}
+    restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: '5m'
+        max-file: '2'

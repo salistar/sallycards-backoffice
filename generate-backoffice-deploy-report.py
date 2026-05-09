@@ -94,7 +94,7 @@ story.append(PageBreak())
 story.append(Paragraph("Sommaire", h1))
 toc = [
     "1. Architecture de la stack",
-    "2. Inventaire complet des 5 conteneurs (tous via GHA)",
+    "2. Inventaire complet des 7 conteneurs (tous via GHA)",
     "3. URLs publiques et services exposes",
     "4. Couts et recap",
     "5. Etape 1 — Domaine Cloudflare Registrar",
@@ -184,7 +184,7 @@ for title, desc in arch_choices:
 
 # ===== 2. Inventaire des 5 conteneurs =====
 story.append(PageBreak())
-story.append(Paragraph("2. Inventaire complet des 5 conteneurs (tous via GHA)", h1))
+story.append(Paragraph("2. Inventaire complet des 7 conteneurs (tous via GHA)", h1))
 
 story.append(Paragraph(
     "Chaque conteneur de la stack passe par le pipeline GitHub Actions, soit en "
@@ -196,12 +196,14 @@ story.append(Paragraph(
 story.append(Spacer(1, 0.2*cm))
 
 containers_data = [
-    ["#", "Container", "Image / Source", "Port int.", "Pipeline GHA", "Volume persistant"],
-    ["1", "sallycards-api",    "ghcr.io/salistar/sallycards-api:latest\n(build via Dockerfile)",       "3000",  "build + push + deploy",  "(stateless)"],
-    ["2", "sallycards-socket", "ghcr.io/salistar/sallycards-socket:latest\n(build via Dockerfile)",    "3001",  "build + push + deploy",  "(stateless)"],
-    ["3", "sallycards-web",    "ghcr.io/salistar/sallycards-web:latest\n(build via Dockerfile)",       "3000",  "build + push + deploy",  "(stateless)"],
-    ["4", "sallycards-mongo",  "mongo:7.0\n(Docker Hub officiel)",                                     "27017", "pull + deploy",          "sallycards-mongo-data"],
-    ["5", "sallycards-redis",  "redis:7.2-alpine\n(Docker Hub officiel)",                              "6379",  "pull + deploy",          "sallycards-redis-data"],
+    ["#", "Container", "Image / Source", "Port int.", "Pipeline GHA", "URL"],
+    ["1", "sallycards-api",       "ghcr.io/salistar/sallycards-api:latest",       "3000",  "build + push + deploy",  "api.salistar.com"],
+    ["2", "sallycards-socket",    "ghcr.io/salistar/sallycards-socket:latest",    "3001",  "build + push + deploy",  "ws.salistar.com"],
+    ["3", "sallycards-web",       "ghcr.io/salistar/sallycards-web:latest",       "3000",  "build + push + deploy",  "sallycards.salistar.com"],
+    ["4", "sallycards-mongo",     "mongo:7.0",                                     "27017", "pull + deploy",          "(interne)"],
+    ["5", "sallycards-redis",     "redis:7.2-alpine",                              "6379",  "pull + deploy",          "(interne)"],
+    ["6", "mongo-express",        "mongo-express:1.0\n(admin UI + basic auth)",   "8081",  "pull + deploy",          "mongo.salistar.com"],
+    ["7", "redis-commander",      "rediscommander/redis-commander\n(admin UI + basic auth)", "8081", "pull + deploy",   "redis.salistar.com"],
 ]
 t = Table(containers_data, colWidths=[0.6*cm, 3*cm, 4.8*cm, 1.4*cm, 3.2*cm, 3*cm])
 t.setStyle(TableStyle([
@@ -227,8 +229,6 @@ exclus = [
     ["Container", "Image", "Raison de l'exclusion"],
     ["sallycards-nginx", "nginx:1.27-alpine", "Remplace par Cloudflare Tunnel - aucun port 80/443 expose sur le VPS"],
     ["sallycards-turn",  "coturn/coturn:4.6", "TURN/STUN deploye separement sur un autre VPS dedie WebRTC"],
-    ["mongo-express",    "mongo-express:1.0", "Profile 'dev' uniquement, accessible via SSH tunnel pour admin"],
-    ["redis-commander",  "rediscommander/redis-commander", "Profile 'dev' uniquement, accessible via SSH tunnel pour admin"],
 ]
 t = Table(exclus, colWidths=[3.5*cm, 3.8*cm, 8.7*cm])
 t.setStyle(TableStyle([
@@ -251,9 +251,39 @@ story.append(t)
 story.append(Spacer(1, 0.3*cm))
 story.append(ok(
     "<b>Verification</b> : sur le VPS, <code>docker compose ps</code> doit montrer "
-    "<b>exactement 5 containers</b> tous en statut <i>Up (healthy)</i>. Si un container "
+    "<b>exactement 7 containers</b> tous en statut <i>Up (healthy)</i>. Si un container "
     "manque, le pipeline GHA le redemarrera automatiquement au prochain push, ou via "
     "<i>docker compose --env-file .env.production -f docker-compose.yml -f docker-compose.prod.yml up -d</i>."
+))
+
+story.append(Spacer(1, 0.3*cm))
+story.append(Paragraph("Acces admin DB (interfaces web protegees) :", h3))
+admin_data = [
+    ["URL", "Outil", "Auth"],
+    ["https://mongo.salistar.com", "mongo-express - explorer/editer MongoDB", "Basic Auth (admin + password)"],
+    ["https://redis.salistar.com", "redis-commander - explorer/editer Redis", "Basic Auth (admin + password)"],
+]
+t = Table(admin_data, colWidths=[5.2*cm, 6.8*cm, 4.0*cm])
+t.setStyle(TableStyle([
+    ("BACKGROUND", (0,0), (-1,0), ACCENT),
+    ("TEXTCOLOR", (0,0), (-1,0), white),
+    ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+    ("FONTSIZE", (0,0), (-1,-1), 8.5),
+    ("VALIGN", (0,0), (-1,-1), "MIDDLE"),
+    ("GRID", (0,0), (-1,-1), 0.3, HexColor("#999")),
+    ("ROWBACKGROUNDS", (0,1), (-1,-1), [white, HexColor("#F6F8FA")]),
+    ("LEFTPADDING", (0,0), (-1,-1), 5),
+    ("RIGHTPADDING", (0,0), (-1,-1), 5),
+    ("TOPPADDING", (0,0), (-1,-1), 5),
+    ("BOTTOMPADDING", (0,0), (-1,-1), 5),
+]))
+story.append(t)
+
+story.append(Spacer(1, 0.2*cm))
+story.append(note(
+    "<b>Recuperer les credentials admin</b> :<br/>"
+    "<code>ssh deploy@91.99.70.43 'grep -E \"(MONGO_EXPRESS|REDIS_COMMANDER)_(USER|PASSWORD)\" "
+    "~/apps/sallycards-backoffice/.env.production'</code>"
 ))
 
 # ===== 3. URLs publiques =====
@@ -265,8 +295,9 @@ urls_data = [
     ["API REST", "https://api.salistar.com/api/v1", "sallycards-api", "3000"],
     ["WebSocket", "https://ws.salistar.com", "sallycards-socket", "3001"],
     ["Web app", "https://sallycards.salistar.com", "sallycards-web", "4000"],
-    ["Backoffice", "https://backoffice.salistar.com", "sallycards-web (admin route)", "4000"],
     ["Landing", "https://salistar.com", "sallycards-web", "4000"],
+    ["MongoDB admin", "https://mongo.salistar.com", "mongo-express (basic auth)", "8083"],
+    ["Redis admin", "https://redis.salistar.com", "redis-commander (basic auth)", "8082"],
     ["TURN/STUN", "turn.salistar.com", "(serveur separe)", "3478"],
 ]
 t = Table(urls_data, colWidths=[2.6*cm, 6.2*cm, 5.4*cm, 1.6*cm])
