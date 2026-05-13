@@ -32,6 +32,12 @@ export class InfraMonitoringController {
     private readonly config: ConfigService,
   ) {}
 
+  // NOTE: NestJS' global TransformInterceptor already wraps every response
+  // as { success: true, data: <controller_return>, timestamp }. Returning
+  // { success, data } from a controller therefore double-wraps it, which
+  // breaks consumers expecting a flat shape. Each handler below returns
+  // the raw payload; the interceptor handles the envelope.
+
   @Post('heartbeat')
   @ApiOperation({ summary: 'Reçoit un heartbeat infra (cron VPS ou bouton mobile)' })
   @ApiHeader({ name: 'X-Heartbeat-Token', description: 'Secret partagé HEARTBEAT_TOKEN' })
@@ -40,7 +46,6 @@ export class InfraMonitoringController {
     @Headers('x-heartbeat-token') token?: string,
   ) {
     const expected = this.config.get<string>('HEARTBEAT_TOKEN');
-    // Si pas de token configuré côté serveur, accepte (mode dev).
     if (expected && token !== expected) {
       this.logger.warn(`Heartbeat rejected — bad token (got=${token?.slice(0, 8)}…)`);
       throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
@@ -49,37 +54,33 @@ export class InfraMonitoringController {
       throw new HttpException('Invalid payload — `results[]` required', HttpStatus.BAD_REQUEST);
     }
     const doc = await this.service.record(payload);
-    return { success: true, data: { id: (doc as any)._id, allOk: doc.allOk } };
+    return { id: (doc as any)._id, allOk: doc.allOk };
   }
 
   @Get('heartbeat/latest')
   @ApiOperation({ summary: 'Dernier heartbeat (statut courant)' })
   async latest() {
-    const doc = await this.service.getLatest();
-    return { success: true, data: doc };
+    return this.service.getLatest();
   }
 
   @Get('heartbeat/history')
   @ApiOperation({ summary: 'Historique heartbeats (fenêtre glissante)' })
   async history(@Query('days') daysQ?: string) {
     const days = Math.max(1, Math.min(90, parseInt(daysQ ?? '7', 10) || 7));
-    const docs = await this.service.getHistory(days);
-    return { success: true, data: docs, meta: { days, count: docs.length } };
+    return this.service.getHistory(days);
   }
 
   @Get('uptime')
   @ApiOperation({ summary: 'Stats uptime % par service sur fenêtre' })
   async uptime(@Query('days') daysQ?: string) {
     const days = Math.max(1, Math.min(90, parseInt(daysQ ?? '30', 10) || 30));
-    const stats = await this.service.getUptimeStats(days);
-    return { success: true, data: stats, meta: { days } };
+    return this.service.getUptimeStats(days);
   }
 
   @Get('check-now')
   @ApiOperation({ summary: 'On-demand probe of the 4 services (server-side)' })
   async checkNow() {
     const data = await this.service.checkNow();
-    // Persist this manual check as a heartbeat so the cards refresh.
     try {
       await this.service.record({
         source: 'manual',
@@ -89,6 +90,6 @@ export class InfraMonitoringController {
     } catch (e) {
       this.logger.warn(`check-now: failed to persist — ${(e as Error).message}`);
     }
-    return { success: true, data };
+    return data;
   }
 }
