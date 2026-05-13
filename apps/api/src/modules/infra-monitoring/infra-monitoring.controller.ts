@@ -74,4 +74,21 @@ export class InfraMonitoringController {
     const stats = await this.service.getUptimeStats(days);
     return { success: true, data: stats, meta: { days } };
   }
+
+  @Get('check-now')
+  @ApiOperation({ summary: 'On-demand probe of the 4 services (server-side)' })
+  async checkNow() {
+    const data = await this.service.checkNow();
+    // Persist this manual check as a heartbeat so the cards refresh.
+    try {
+      await this.service.record({
+        source: 'manual',
+        checkedAt: data.checkedAt,
+        results: data.results,
+      });
+    } catch (e) {
+      this.logger.warn(`check-now: failed to persist — ${(e as Error).message}`);
+    }
+    return { success: true, data };
+  }
 }

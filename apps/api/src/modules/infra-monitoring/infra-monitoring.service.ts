@@ -28,6 +28,110 @@ export class InfraMonitoringService {
     private readonly heartbeatModel: Model<HeartbeatDocument>,
   ) {}
 
+  /**
+   * On-demand probe — runs from inside the container so it can hit:
+   *   - the API itself (loopback)
+   *   - the socket-server (over the docker network)
+   *   - the TURN server (DNS resolution + TCP connect to 3478)
+   *   - Mongo (mongoose connection already up if API is alive)
+   * Used by the "Vérifier maintenant" button on salistar.com (the browser
+   * can't probe TURN/UDP or internal Mongo on its own).
+   */
+  async checkNow(): Promise<{ source: 'manual'; checkedAt: string; results: ServiceCheck[]; allOk: boolean }> {
+    const results: ServiceCheck[] = await Promise.all([
+      this.probeHttp('api', 'http://localhost:3000/api/v1/health'),
+      this.probeHttp('socket', 'http://sallycards-socket:3001/health'),
+      this.probeHttp('turn', 'turn.salistar.com:3478'),
+      this.probeMongo(),
+    ]);
+    const allOk = results.every((r) => r.ok);
+    return {
+      source: 'manual',
+      checkedAt: new Date().toISOString(),
+      results,
+      allOk,
+    };
+  }
+
+  private async probeHttp(
+    service: 'api' | 'socket' | 'turn',
+    target: string,
+  ): Promise<ServiceCheck> {
+    const t0 = Date.now();
+    // For TURN we do a TCP-level connect probe (not HTTP) since 3478 speaks
+    // STUN/TURN. Use Node's net module for that path.
+    if (service === 'turn') {
+      const [host, portStr] = target.split(':');
+      const port = parseInt(portStr ?? '3478', 10);
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const net = require('node:net');
+      return new Promise<ServiceCheck>((resolve) => {
+        const socket = new net.Socket();
+        const done = (ok: boolean, error?: string) => {
+          try { socket.destroy(); } catch { /* noop */ }
+          resolve({
+            service,
+            ok,
+            latencyMs: Date.now() - t0,
+            url: `tcp://${host}:${port}`,
+            error,
+          });
+        };
+        socket.setTimeout(3000);
+        socket.once('connect', () => done(true));
+        socket.once('timeout', () => done(false, 'timeout'));
+        socket.once('error', (err: Error) => done(false, err.message));
+        socket.connect(port, host);
+      });
+    }
+    // HTTP probe (api + socket).
+    const url = target;
+    try {
+      const ctrl = new AbortController();
+      const timeout = setTimeout(() => ctrl.abort(), 5000);
+      const res = await fetch(url, { method: 'GET', signal: ctrl.signal });
+      clearTimeout(timeout);
+      return {
+        service,
+        ok: res.ok,
+        latencyMs: Date.now() - t0,
+        status: res.status,
+        url,
+      };
+    } catch (e: any) {
+      return {
+        service,
+        ok: false,
+        latencyMs: Date.now() - t0,
+        error: e?.message ?? 'unreachable',
+        url,
+      };
+    }
+  }
+
+  private async probeMongo(): Promise<ServiceCheck> {
+    const t0 = Date.now();
+    try {
+      // The heartbeat collection exists if mongoose is connected. A simple
+      // findOne() round-trip is a sufficient liveness check.
+      await this.heartbeatModel.findOne().limit(1).lean().exec();
+      return {
+        service: 'mongo',
+        ok: true,
+        latencyMs: Date.now() - t0,
+        url: 'mongodb://sallycards-mongo:27017',
+      };
+    } catch (e: any) {
+      return {
+        service: 'mongo',
+        ok: false,
+        latencyMs: Date.now() - t0,
+        error: e?.message ?? 'mongo down',
+        url: 'mongodb://sallycards-mongo:27017',
+      };
+    }
+  }
+
   async record(payload: HeartbeatPayload): Promise<HeartbeatDocument> {
     const allOk = payload.results.every((r) => r.ok);
     const doc = await this.heartbeatModel.create({
