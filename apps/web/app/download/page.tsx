@@ -17,8 +17,9 @@ const GAMES = [
 ];
 
 // GitHub releases — the sally-solitaire repo publishes a "latest" release
-// on every main push (see .github/workflows/android-build.yml). The APK
-// URL is stable and public.
+// on every main push (see .github/workflows/android-build.yml). The URL
+// returns Content-Disposition: attachment, so the browser will download
+// the .apk instead of trying to render it.
 const APK_URL = 'https://github.com/salistar/sally-solitaire/releases/download/latest/app-debug.apk';
 const RELEASE_PAGE_URL = 'https://github.com/salistar/sally-solitaire/releases/tag/latest';
 const RELEASES_API = 'https://api.github.com/repos/salistar/sally-solitaire/releases/tags/latest';
@@ -31,6 +32,7 @@ export default function DownloadPage() {
     apkSize?: number;
   } | null>(null);
   const [loadingRelease, setLoadingRelease] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     fetch(RELEASES_API)
@@ -53,6 +55,28 @@ export default function DownloadPage() {
   }, []);
 
   const apkSizeMB = release?.apkSize ? (release.apkSize / 1024 / 1024).toFixed(1) : null;
+
+  /**
+   * Force-download the APK with a hidden anchor + click + cleanup.
+   * Combined with the GH release URL's Content-Disposition header, this
+   * triggers an immediate file download with no navigation.
+   */
+  const triggerDownload = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setDownloading(true);
+    // Create a hidden anchor element and click it — most reliable
+    // cross-browser way to force a download (incl. iOS Safari mobile).
+    const a = document.createElement('a');
+    a.href = APK_URL;
+    a.download = 'sally-solitaire-latest.apk';
+    a.rel = 'noopener noreferrer';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // Reset the loading state after a brief visual confirmation.
+    setTimeout(() => setDownloading(false), 2500);
+  };
 
   return (
     <main className="min-h-screen overflow-x-hidden" style={{ backgroundColor: '#0a0d14' }}>
@@ -117,9 +141,22 @@ export default function DownloadPage() {
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
               <a
                 href={APK_URL}
-                className="flex-1 px-6 py-4 rounded-xl font-black text-base bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-2xl hover:scale-[1.02] active:scale-95 transition-all duration-300 ease-out flex items-center justify-center gap-3"
+                download="sally-solitaire-latest.apk"
+                rel="noopener noreferrer"
+                onClick={triggerDownload}
+                aria-disabled={downloading}
+                className={`flex-1 px-6 py-4 rounded-xl font-black text-base bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-2xl hover:scale-[1.02] active:scale-95 transition-all duration-300 ease-out flex items-center justify-center gap-3 ${
+                  downloading ? 'opacity-80 cursor-wait' : ''
+                }`}
               >
-                ⬇ Telecharger l'APK {apkSizeMB ? `(${apkSizeMB} MB)` : ''}
+                {downloading ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                    Telechargement lance…
+                  </>
+                ) : (
+                  <>⬇ Telecharger l'APK {apkSizeMB ? `(${apkSizeMB} MB)` : ''}</>
+                )}
               </a>
               <a
                 href={RELEASE_PAGE_URL}
@@ -130,6 +167,12 @@ export default function DownloadPage() {
                 Voir la release
               </a>
             </div>
+            {downloading && (
+              <p className="mt-3 text-xs text-emerald-300 font-medium">
+                Le telechargement a demarre. Si rien ne se passe, clique sur "Voir la release" puis sur le bouton{' '}
+                <code className="text-emerald-200 bg-emerald-500/20 px-1.5 py-0.5 rounded">app-debug.apk</code>.
+              </p>
+            )}
 
             {loadingRelease ? (
               <p className="mt-4 text-xs text-slate-500">Chargement des infos de release…</p>
