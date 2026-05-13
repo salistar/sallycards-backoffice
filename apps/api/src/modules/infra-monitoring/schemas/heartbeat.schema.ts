@@ -16,8 +16,8 @@ export type HeartbeatDocument = HydratedDocument<Heartbeat>;
 
 @Schema({ _id: false })
 export class ServiceCheck {
-  @Prop({ required: true, enum: ['api', 'socket', 'turn', 'mongo'] })
-  service!: 'api' | 'socket' | 'turn' | 'mongo';
+  @Prop({ required: true, enum: ['api', 'socket', 'turn', 'mongo', 'redis'] })
+  service!: 'api' | 'socket' | 'turn' | 'mongo' | 'redis';
 
   @Prop({ required: true })
   ok!: boolean;

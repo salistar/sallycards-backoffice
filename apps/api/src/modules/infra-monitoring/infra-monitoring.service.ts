@@ -43,6 +43,7 @@ export class InfraMonitoringService {
       this.probeHttp('socket', 'http://sallycards-socket:3001/health'),
       this.probeHttp('turn', 'turn.salistar.com:3478'),
       this.probeMongo(),
+      this.probeRedis(),
     ]);
     const allOk = results.every((r) => r.ok);
     return {
@@ -105,6 +106,48 @@ export class InfraMonitoringService {
         latencyMs: Date.now() - t0,
         error: e?.message ?? 'unreachable',
         url,
+      };
+    }
+  }
+
+  private async probeRedis(): Promise<ServiceCheck> {
+    const t0 = Date.now();
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const net = require('node:net');
+      const host = 'sallycards-redis';
+      const port = 6379;
+      return await new Promise<ServiceCheck>((resolve) => {
+        const socket = new net.Socket();
+        const done = (ok: boolean, error?: string) => {
+          try { socket.destroy(); } catch { /* noop */ }
+          resolve({
+            service: 'redis' as any,
+            ok,
+            latencyMs: Date.now() - t0,
+            url: `redis://${host}:${port}`,
+            error,
+          });
+        };
+        socket.setTimeout(3000);
+        // After TCP connect, send a PING command (RESP-2) and check for +PONG.
+        socket.once('connect', () => {
+          socket.write('*1\r\n$4\r\nPING\r\n');
+        });
+        socket.once('data', (buf: Buffer) => {
+          done(buf.toString('utf8').startsWith('+PONG'));
+        });
+        socket.once('timeout', () => done(false, 'timeout'));
+        socket.once('error', (err: Error) => done(false, err.message));
+        socket.connect(port, host);
+      });
+    } catch (e: any) {
+      return {
+        service: 'redis' as any,
+        ok: false,
+        latencyMs: Date.now() - t0,
+        error: e?.message ?? 'redis probe failed',
+        url: 'redis://sallycards-redis:6379',
       };
     }
   }
@@ -181,7 +224,7 @@ export class InfraMonitoringService {
       .lean()
       .exec();
     const stats: Record<string, { ok: number; total: number; uptimePct: number }> = {};
-    for (const svc of ['api', 'socket', 'turn', 'mongo']) {
+    for (const svc of ['api', 'socket', 'turn', 'mongo', 'redis']) {
       let ok = 0, total = 0;
       for (const d of docs) {
         const found = d.results.find((r) => r.service === svc);
