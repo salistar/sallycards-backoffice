@@ -49,8 +49,9 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new TransformInterceptor(), new LoggingInterceptor());
 
-  // Swagger
-  if (nodeEnv !== 'production') {
+  // Swagger — exposed in ALL envs (the salistar.com Monitoring dashboard
+  // links to /api/docs). The doc itself is read-only.
+  {
     const swaggerConfig = new DocumentBuilder()
       .setTitle('SallyCards API')
       .setDescription('API pour la suite de jeux de cartes SallyCards')
@@ -63,11 +64,17 @@ async function bootstrap() {
       .addTag('leaderboard', 'Classements')
       .addTag('assets', 'Assets cartes')
       .addTag('health', 'Santé du service')
+      .addTag('Infra Monitoring', 'Heartbeats + uptime stats')
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup('api/docs', app, document);
-    logger.log('Swagger docs available at /api/docs');
+
+    // Convenience redirect: GET /api -> /api/docs.
+    const httpAdapter = app.getHttpAdapter().getInstance();
+    httpAdapter.get('/api', (_req: any, res: any) => res.redirect('/api/docs'));
+
+    logger.log(`Swagger docs available at /api/docs [${nodeEnv}]`);
   }
 
   await app.listen(port);

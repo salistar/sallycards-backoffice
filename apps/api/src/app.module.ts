@@ -26,6 +26,7 @@ import { HealthModule } from './modules/health/health.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ShopModule } from './modules/shop/shop.module';
 import { ChallengesModule } from './modules/challenges/challenges.module';
+import { InfraMonitoringModule } from './modules/infra-monitoring/infra-monitoring.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -103,6 +104,7 @@ import { AppController } from './app.controller';
     AdminModule,
     ShopModule,
     ChallengesModule,
+    InfraMonitoringModule,
   ],
   controllers: [AppController],
   providers: [
