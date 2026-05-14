@@ -263,27 +263,42 @@ export default function DownloadIndexPage() {
                 {g.available ? t('common.available') : t('common.soon')}
               </span>
 
-              <div
-                style={{
-                  width: '100px',
-                  height: '100px',
-                  borderRadius: '24px',
-                  overflow: 'hidden',
-                  marginBottom: '20px',
-                  boxShadow: '0 14px 32px rgba(10,21,53,0.4)',
-                  background: g.gradient,
-                  padding: '4px',
-                }}
-              >
-                <Image
-                  src={g.iconSrc}
-                  alt={g.name}
-                  width={100}
-                  height={100}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '20px' }}
-                  unoptimized
-                />
-              </div>
+              {g.slug === 'solitaire' ? (
+                <div
+                  style={{
+                    width: '100%',
+                    height: '100px',
+                    marginBottom: '20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <BrandLogo size={56} />
+                </div>
+              ) : (
+                <div
+                  style={{
+                    width: '100px',
+                    height: '100px',
+                    borderRadius: '24px',
+                    overflow: 'hidden',
+                    marginBottom: '20px',
+                    boxShadow: '0 14px 32px rgba(10,21,53,0.4)',
+                    background: g.gradient,
+                    padding: '4px',
+                  }}
+                >
+                  <Image
+                    src={g.iconSrc}
+                    alt={g.name}
+                    width={100}
+                    height={100}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '20px' }}
+                    unoptimized
+                  />
+                </div>
+              )}
 
               <h3 style={{ fontFamily: titleFont, fontSize: '24px', fontWeight: 700, color: C.white, margin: '0 0 6px', lineHeight: 1.2 }}>
                 {g.name}

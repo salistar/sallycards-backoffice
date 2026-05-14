@@ -744,52 +744,41 @@ export default function HomePage() {
                 />
               </div>
 
-              {/* Floating cards — KEPT INSIDE container */}
+              {/* Floating cards — REAL French-deck PNGs from the mobile app */}
               {[
-                { v: 'A', s: '♠', top: '5%', left: '0%', r: -12, delay: 0 },
-                { v: 'K', s: '♥', top: '0%', right: '0%', r: 14, delay: 1 },
-                { v: 'Q', s: '♦', bottom: '8%', left: '0%', r: -8, delay: 2 },
-                { v: 'J', s: '♣', bottom: '0%', right: '0%', r: 10, delay: 3 },
-              ].map((c, i) => {
-                const isRed = c.s === '♥' || c.s === '♦';
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      position: 'absolute',
-                      top: c.top,
-                      left: c.left,
-                      right: c.right,
-                      bottom: c.bottom,
-                      width: '90px',
-                      height: '130px',
-                      borderRadius: '14px',
-                      background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
-                      border: '1px solid rgba(10,21,53,0.1)',
-                      boxShadow: '0 12px 32px rgba(10,21,53,0.4)',
-                      // @ts-expect-error CSS custom prop
-                      '--r': `${c.r}deg`,
-                      transform: `rotate(${c.r}deg)`,
-                      animation: `floatY 6s ease-in-out ${c.delay}s infinite`,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      padding: '8px',
-                      zIndex: 4,
-                    }}
-                  >
-                    <div style={{ alignSelf: 'flex-start', textAlign: 'center', lineHeight: 1, color: isRed ? '#EF4444' : C.navyDeep }}>
-                      <div style={{ fontSize: '20px', fontWeight: 900 }}>{c.v}</div>
-                      <div style={{ fontSize: '16px' }}>{c.s}</div>
-                    </div>
-                    <div style={{ alignSelf: 'center', fontSize: '38px', color: isRed ? '#EF4444' : C.navyDeep }}>{c.s}</div>
-                    <div style={{ alignSelf: 'flex-end', textAlign: 'center', lineHeight: 1, color: isRed ? '#EF4444' : C.navyDeep, transform: 'rotate(180deg)' }}>
-                      <div style={{ fontSize: '20px', fontWeight: 900 }}>{c.v}</div>
-                      <div style={{ fontSize: '16px' }}>{c.s}</div>
-                    </div>
-                  </div>
-                );
-              })}
+                { file: 'AS', top: '5%', left: '-8%', r: -14, delay: 0 },
+                { file: 'KH', top: '-2%', right: '-6%', r: 16, delay: 1 },
+                { file: 'QD', bottom: '8%', left: '-6%', r: -8, delay: 2 },
+                { file: 'JC', bottom: '-2%', right: '-8%', r: 12, delay: 3 },
+              ].map((c) => (
+                <div
+                  key={c.file}
+                  style={{
+                    position: 'absolute',
+                    top: c.top,
+                    left: c.left,
+                    right: c.right,
+                    bottom: c.bottom,
+                    width: '110px',
+                    height: '154px',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: '0 16px 40px rgba(10,21,53,0.55)',
+                    transform: `rotate(${c.r}deg)`,
+                    animation: `floatY 6s ease-in-out ${c.delay}s infinite`,
+                    zIndex: 4,
+                  }}
+                >
+                  <Image
+                    src={`/cards/fr/${c.file}.png`}
+                    alt={c.file}
+                    width={120}
+                    height={170}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    unoptimized
+                  />
+                </div>
+              ))}
             </div>
           </Reveal>
         </div>
@@ -1081,27 +1070,42 @@ export default function HomePage() {
                     {g.available ? t('common.available') : t('common.soon')}
                   </span>
 
-                  <div
-                    style={{
-                      width: '88px',
-                      height: '88px',
-                      borderRadius: '22px',
-                      overflow: 'hidden',
-                      marginBottom: '20px',
-                      boxShadow: '0 12px 28px rgba(10,21,53,0.4)',
-                      background: g.gradient,
-                      padding: '4px',
-                    }}
-                  >
-                    <Image
-                      src={g.iconSrc}
-                      alt={g.name}
-                      width={88}
-                      height={88}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '18px' }}
-                      unoptimized
-                    />
-                  </div>
+                  {g.slug === 'solitaire' ? (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: '88px',
+                        marginBottom: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <BrandLogo size={48} />
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        width: '88px',
+                        height: '88px',
+                        borderRadius: '22px',
+                        overflow: 'hidden',
+                        marginBottom: '20px',
+                        boxShadow: '0 12px 28px rgba(10,21,53,0.4)',
+                        background: g.gradient,
+                        padding: '4px',
+                      }}
+                    >
+                      <Image
+                        src={g.iconSrc}
+                        alt={g.name}
+                        width={88}
+                        height={88}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '18px' }}
+                        unoptimized
+                      />
+                    </div>
+                  )}
 
                   <h3
                     style={{
