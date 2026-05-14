@@ -1,607 +1,957 @@
 /**
  * @file apps/web/app/page.tsx
- * @description Homepage SallyCards (sallycards.salistar.com) — design dark
- * premium, trilingue FR/EN/AR avec support RTL, 10 jeux affichés avec deux
- * états clairs : "DISPONIBLE" (Solitaire avec icône mobile réelle + bouton
- * download) ou "BIENTÔT" (badge orange, dimmed card, bouton "Notify me").
+ * @description Landing page premium SallyCards — design haut de gamme
+ * inspiré Apple / Supercell / King.com. Dégradé bleu nuit → ivoire,
+ * Playfair Display pour les titres, motifs de cartes en filigrane,
+ * boutons stores officiels Google Play + App Store.
  *
- * Design system :
- *   - bg #0a0e1a + grid-pattern + glow orbs animés (emerald, cyan, pink)
- *   - Glassmorphism: rgba(15,23,42,0.6) + backdrop-blur(24px)
- *   - Gradients : emerald → cyan, gold → pink (états)
- *   - Typo : Inter, font-black, 7xl-8xl titles
- *   - Animations : float, glow, scroll-reveal, hover lift
+ * 9 sections : Header sticky / Hero / Features / How to play /
+ * Screenshots / Testimonials / Stats / CTA final / Footer.
  *
- * Pas de modification du package.json (react-i18next déjà installé).
+ * Trilingue FR/EN/AR (i18n existant via react-i18next), RTL auto pour AR.
  */
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './components/LanguageSwitcher';
-import ScrollReveal from './components/ScrollReveal';
 
-// ─── Game catalogue ─────────────────────────────────────────────────────
-// `available: true` → carte mise en avant avec bouton "Download" actif.
-// `available: false` → carte dimmed avec badge "Coming soon" + bouton désactivé.
+// Palette officielle du brief (utilisée en inline style pour garantir
+// le rendu, car certaines valeurs ne sont pas dans la config Tailwind).
+const PALETTE = {
+  navy:     '#0A1F44',
+  royal:    '#1E3A8A',
+  electric: '#2563EB',
+  sky:      '#60A5FA',
+  ivory:    '#F8FAFC',
+  white:    '#FFFFFF',
+  gold:     '#FCD34D',
+};
 
-interface GameInfo {
-  slug: string;
-  name: string;
-  glyph: string;     // emoji ou caractère iconique pour la card (fallback si pas d'icône image)
-  iconSrc?: string;  // chemin d'icône (e.g. solitaire-icon.png), prend le pas sur glyph
-  desc: { fr: string; en: string; ar: string };
-  players: string;
-  gradient: string;
-  available: boolean;
+// ───────────────────────────────────────────────────────────────────────
+// Logos stores officiels (SVG inline pour zéro requête réseau)
+// ───────────────────────────────────────────────────────────────────────
+
+function GooglePlayLogo({ className = 'w-7 h-7' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 512 512" className={className} aria-hidden="true">
+      <path fill="#00D4FF" d="M81 41c-7 4-11 12-11 22v386c0 10 4 18 11 22l213-208v-14L81 41z" />
+      <path fill="#FFD400" d="M294 263v-14L373 170l85 47c25 14 25 36 0 50l-85 47-79-51z" />
+      <path fill="#FF3C00" d="M81 471c4 5 11 7 19 4l278-156-84-56-213 208z" />
+      <path fill="#00C846" d="M81 41l213 208 84-56L100 37c-8-3-15-1-19 4z" />
+    </svg>
+  );
 }
 
-const GAMES: GameInfo[] = [
-  {
-    slug: 'solitaire',
-    name: 'Solitaire',
-    glyph: '♦',
-    iconSrc: '/solitaire-icon.png',
-    desc: {
-      fr: '192 variantes (Klondike, Spider, FreeCell, TriPeaks…) + mode multijoueur P2P',
-      en: '192 variants (Klondike, Spider, FreeCell, TriPeaks…) + P2P multiplayer mode',
-      ar: '192 متغيراً (Klondike، Spider، FreeCell، TriPeaks…) + لعب جماعي P2P',
-    },
-    players: '1-4',
-    gradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
-    available: true,
-  },
-  {
-    slug: 'ronda',
-    name: 'Ronda',
-    glyph: '🃏',
-    desc: { fr: 'Capture marocaine classique', en: 'Classic Moroccan capture', ar: 'لعبة التقاط مغربية كلاسيكية' },
-    players: '2-4',
-    gradient: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
-    available: false,
-  },
-  {
-    slug: 'kdoub',
-    name: 'Kdoub',
-    glyph: '🤥',
-    desc: { fr: 'Bluff et contestation', en: 'Bluff and challenge', ar: 'خداع وتحدي' },
-    players: '3-6',
-    gradient: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
-    available: false,
-  },
-  {
-    slug: 'belote',
-    name: 'Belote',
-    glyph: '♣',
-    desc: { fr: 'Jeu de levées en équipe', en: 'Tricks-and-tactics team game', ar: 'لعبة جماعية بالحيل' },
-    players: '4',
-    gradient: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
-    available: false,
-  },
-  {
-    slug: 'poker',
-    name: 'Poker',
-    glyph: '♠',
-    desc: { fr: "Texas Hold'em No-Limit", en: "Texas Hold'em No-Limit", ar: 'تكساس هولدم بدون حدود' },
-    players: '2-9',
-    gradient: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)',
-    available: false,
-  },
-  {
-    slug: 'tarot',
-    name: 'Tarot',
-    glyph: '👑',
-    desc: { fr: '78 cartes, 22 atouts', en: '78 cards, 22 trumps', ar: '78 ورقة، 22 أتو' },
-    players: '3-5',
-    gradient: 'linear-gradient(135deg, #ec4899 0%, #831843 100%)',
-    available: false,
-  },
-  {
-    slug: 'scopa',
-    name: 'Scopa',
-    glyph: '🪙',
-    desc: { fr: 'Capture italienne', en: 'Italian capture game', ar: 'لعبة التقاط إيطالية' },
-    players: '2-4',
-    gradient: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
-    available: false,
-  },
-  {
-    slug: 'okey',
-    name: 'Okey',
-    glyph: '🎴',
-    desc: { fr: 'Rami turc avec tuiles', en: 'Turkish rummy with tiles', ar: 'رامي تركي بالقطع' },
-    players: '4',
-    gradient: 'linear-gradient(135deg, #06b6d4 0%, #0e7490 100%)',
-    available: false,
-  },
-  {
-    slug: 'memory',
-    name: 'Memory',
-    glyph: '🧠',
-    desc: { fr: 'Trouvez les paires', en: 'Find the pairs', ar: 'اعثر على الأزواج' },
-    players: '1-4',
-    gradient: 'linear-gradient(135deg, #84cc16 0%, #15803d 100%)',
-    available: false,
-  },
-  {
-    slug: 'qui-est-ce',
-    name: 'Qui-est-ce?',
-    glyph: '❓',
-    desc: { fr: 'Déduction oui/non', en: 'Yes/no deduction', ar: 'استنتاج بنعم/لا' },
-    players: '2',
-    gradient: 'linear-gradient(135deg, #6366f1 0%, #312e81 100%)',
-    available: false,
-  },
-];
+function AppleLogo({ className = 'w-7 h-7' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 384 512" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+    </svg>
+  );
+}
 
-const FEATURES_KEYS: Array<{ glyph: string; titleKey: string; descKey: string }> = [
-  { glyph: '🌐', titleKey: 'feature.multiplayer.title', descKey: 'feature.multiplayer.desc' },
-  { glyph: '📴', titleKey: 'feature.offline.title', descKey: 'feature.offline.desc' },
-  { glyph: '🔒', titleKey: 'feature.privacy.title', descKey: 'feature.privacy.desc' },
-  { glyph: '🗣️', titleKey: 'feature.languages.title', descKey: 'feature.languages.desc' },
-  { glyph: '🛡️', titleKey: 'feature.fair.title', descKey: 'feature.fair.desc' },
-  { glyph: '📱', titleKey: 'feature.crossplatform.title', descKey: 'feature.crossplatform.desc' },
-];
+// Bouton store — fond noir, logo + double texte (sur-titre + nom store)
+function StoreButton({
+  variant,
+  topLine,
+  store,
+  href,
+  disabled = false,
+  badge,
+  onClick,
+}: {
+  variant: 'google' | 'apple';
+  topLine: string;
+  store: string;
+  href: string;
+  disabled?: boolean;
+  badge?: string;
+  onClick?: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <a
+      href={href}
+      onClick={onClick}
+      aria-disabled={disabled}
+      target={variant === 'apple' || disabled ? '_self' : undefined}
+      rel="noopener noreferrer"
+      className={`relative inline-flex items-center gap-3 px-5 h-[60px] rounded-xl border transition-all duration-300 ${
+        disabled
+          ? 'opacity-60 cursor-not-allowed'
+          : 'hover:scale-[1.04] hover:shadow-[0_8px_32px_rgba(37,99,235,0.45)]'
+      }`}
+      style={{
+        backgroundColor: '#000',
+        borderColor: 'rgba(255,255,255,0.15)',
+      }}
+    >
+      {variant === 'google' ? (
+        <GooglePlayLogo className="w-8 h-8" />
+      ) : (
+        <AppleLogo className="w-8 h-8 text-white" />
+      )}
+      <span className="flex flex-col items-start leading-tight">
+        <span className="text-[10px] font-medium text-white/80 tracking-wide">{topLine}</span>
+        <span className="text-base font-bold text-white tracking-tight">{store}</span>
+      </span>
+      {badge && (
+        <span
+          className="absolute -top-2 -end-2 px-2 py-0.5 rounded-full text-[9px] font-black tracking-widest"
+          style={{
+            backgroundColor: disabled ? PALETTE.gold : '#10B981',
+            color: PALETTE.navy,
+          }}
+        >
+          {badge}
+        </span>
+      )}
+    </a>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Motif de cartes à jouer en filigrane (background décoratif)
+// ───────────────────────────────────────────────────────────────────────
+
+function SuitMotif({
+  suit,
+  className,
+  style,
+}: {
+  suit: '♠' | '♥' | '♦' | '♣';
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const color = suit === '♥' || suit === '♦' ? '#EF4444' : '#0A1F44';
+  return (
+    <span
+      aria-hidden="true"
+      className={`absolute select-none font-serif ${className ?? ''}`}
+      style={{ color, opacity: 0.06, ...style }}
+    >
+      {suit}
+    </span>
+  );
+}
+
+// Card flottante 3D pour le hero
+function FloatingCard({
+  suit,
+  value,
+  className,
+  delay = 0,
+  rotate = -8,
+}: {
+  suit: '♠' | '♥' | '♦' | '♣';
+  value: string;
+  className?: string;
+  delay?: number;
+  rotate?: number;
+}) {
+  const isRed = suit === '♥' || suit === '♦';
+  return (
+    <div
+      className={`absolute select-none ${className ?? ''}`}
+      style={{
+        animation: `floatCard 6s ease-in-out ${delay}s infinite`,
+        transform: `rotate(${rotate}deg)`,
+        filter: 'drop-shadow(0 12px 32px rgba(10,31,68,0.35))',
+      }}
+    >
+      <div
+        className="w-[120px] h-[170px] rounded-2xl flex flex-col items-center justify-between p-3 border"
+        style={{
+          background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
+          borderColor: 'rgba(10,31,68,0.1)',
+        }}
+      >
+        <div className="self-start flex flex-col items-center leading-none">
+          <span className="text-2xl font-black" style={{ color: isRed ? '#EF4444' : PALETTE.navy }}>
+            {value}
+          </span>
+          <span className="text-xl" style={{ color: isRed ? '#EF4444' : PALETTE.navy }}>
+            {suit}
+          </span>
+        </div>
+        <span className="text-5xl" style={{ color: isRed ? '#EF4444' : PALETTE.navy }}>
+          {suit}
+        </span>
+        <div className="self-end flex flex-col items-center leading-none rotate-180">
+          <span className="text-2xl font-black" style={{ color: isRed ? '#EF4444' : PALETTE.navy }}>
+            {value}
+          </span>
+          <span className="text-xl" style={{ color: isRed ? '#EF4444' : PALETTE.navy }}>
+            {suit}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Animated counter for stats section
+function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
+  const [val, setVal] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          const duration = 1600;
+          const start = performance.now();
+          const tick = (t: number) => {
+            const p = Math.min(1, (t - start) / duration);
+            const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+            setVal(Math.round(to * eased));
+            if (p < 1) requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.3 },
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [to]);
+  return (
+    <span ref={ref}>
+      {val}
+      {suffix}
+    </span>
+  );
+}
+
+// Scroll-reveal helper (Intersection Observer + CSS class)
+function Reveal({
+  children,
+  delay = 0,
+  className = '',
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => setVisible(true), delay);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.15 },
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [delay]);
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(24px)',
+        transition: 'opacity 0.8s ease-out, transform 0.8s ease-out',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// HOMEPAGE
+// ───────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
   const { t, i18n } = useTranslation();
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-
   const lang = (i18n.language?.split('-')[0] ?? 'fr') as 'fr' | 'en' | 'ar';
   const isRtl = lang === 'ar';
+  const [scrolled, setScrolled] = useState(false);
 
-  const faqs = [
-    { q: t('faq.q1'), a: t('faq.a1') },
-    { q: t('faq.q2'), a: t('faq.a2') },
-    { q: t('faq.q3'), a: t('faq.a3') },
-    { q: t('faq.q4'), a: t('faq.a4') },
-    { q: t('faq.q5'), a: t('faq.a5') },
-    { q: t('faq.q6'), a: t('faq.a6') },
-  ];
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 50);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const titleFont = isRtl
+    ? "'Cairo', 'Playfair Display', serif"
+    : "'Playfair Display', 'Cairo', serif";
+  const bodyFont = isRtl
+    ? "'Cairo', 'Inter', sans-serif"
+    : "'Inter', 'Cairo', sans-serif";
 
   return (
     <main
       dir={isRtl ? 'rtl' : 'ltr'}
-      className="min-h-screen w-full overflow-x-hidden relative"
+      className="min-h-screen w-full overflow-x-hidden"
       style={{
-        backgroundColor: '#0a0e1a',
-        color: '#e7e9ee',
-        fontFamily: isRtl
-          ? "'Cairo', 'Inter', system-ui, sans-serif"
-          : "'Inter', system-ui, sans-serif",
+        background: `linear-gradient(180deg, ${PALETTE.navy} 0%, ${PALETTE.royal} 25%, ${PALETTE.electric} 55%, ${PALETTE.sky} 80%, ${PALETTE.ivory} 100%)`,
+        color: PALETTE.white,
+        fontFamily: bodyFont,
       }}
     >
-      {/* ─── Grid pattern + glow orbs in fixed background ─── */}
-      <div
-        aria-hidden
-        className="fixed inset-0 -z-10 opacity-50"
-        style={{
-          backgroundImage:
-            'linear-gradient(to right, rgba(16,185,129,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(16,185,129,0.05) 1px, transparent 1px)',
-          backgroundSize: '64px 64px',
-        }}
-      />
-      <div
-        aria-hidden
-        className="fixed -z-10 rounded-full"
-        style={{
-          top: '-20%',
-          left: '-10%',
-          width: '600px',
-          height: '600px',
-          background: '#10b981',
-          filter: 'blur(120px)',
-          opacity: 0.25,
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        aria-hidden
-        className="fixed -z-10 rounded-full"
-        style={{
-          top: '40%',
-          right: '-10%',
-          width: '700px',
-          height: '700px',
-          background: '#06b6d4',
-          filter: 'blur(140px)',
-          opacity: 0.2,
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        aria-hidden
-        className="fixed -z-10 rounded-full"
-        style={{
-          bottom: '-20%',
-          left: '30%',
-          width: '600px',
-          height: '600px',
-          background: '#ec4899',
-          filter: 'blur(130px)',
-          opacity: 0.15,
-          pointerEvents: 'none',
-        }}
-      />
+      {/* Local keyframes for the page (avoid touching globals.css) */}
+      <style>{`
+        @keyframes floatCard {
+          0%, 100% { transform: translateY(0px) rotate(var(--r, -8deg)); }
+          50%      { transform: translateY(-22px) rotate(calc(var(--r, -8deg) + 4deg)); }
+        }
+        @keyframes shineGold {
+          0%   { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        .gold-shine {
+          background: linear-gradient(90deg, ${PALETTE.gold} 0%, #FFFFFF 50%, ${PALETTE.gold} 100%);
+          background-size: 200% 100%;
+          animation: shineGold 4s linear infinite;
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+        }
+      `}</style>
 
-      {/* ═════════ NAVBAR ═════════ */}
-      <nav
-        className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b"
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/*  1️⃣ HEADER STICKY                                                */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <header
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
         style={{
-          backgroundColor: 'rgba(10,14,26,0.85)',
-          borderColor: 'rgba(255,255,255,0.06)',
+          height: '80px',
+          backgroundColor: scrolled ? 'rgba(10, 31, 68, 0.95)' : 'transparent',
+          backdropFilter: scrolled ? 'blur(20px)' : 'none',
+          WebkitBackdropFilter: scrolled ? 'blur(20px)' : 'none',
+          borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : '1px solid transparent',
         }}
       >
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
+        <div className="max-w-7xl mx-auto h-full px-8 flex items-center justify-between gap-6">
+          <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
-              style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
+              className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl shadow-lg group-hover:scale-110 transition-transform"
+              style={{
+                background: `linear-gradient(135deg, ${PALETTE.electric}, ${PALETTE.sky})`,
+                boxShadow: '0 4px 16px rgba(96,165,250,0.4)',
+              }}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="3" />
-                <path d="M12 8v8M8 12h8" />
-              </svg>
+              ♠
             </div>
-            <span className="text-xl font-black tracking-tight" style={{ color: '#f8fafc' }}>
-              Sally<span style={{ color: '#10b981' }}>Cards</span>
+            <span
+              className="text-2xl font-black tracking-tight"
+              style={{ color: PALETTE.white, fontFamily: titleFont }}
+            >
+              Sally<span style={{ color: PALETTE.gold }}>Cards</span>
             </span>
           </Link>
 
-          <div
-            className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-widest"
-            style={{ color: '#94a3b8' }}
-          >
-            <a href="#games" className="hover:text-white transition-colors">{t('nav.games')}</a>
-            <a href="#features" className="hover:text-white transition-colors">{t('nav.features')}</a>
-            <a href="#how" className="hover:text-white transition-colors">{t('nav.help')}</a>
-          </div>
+          <nav className="hidden lg:flex items-center gap-7 text-sm font-semibold" style={{ color: PALETTE.white }}>
+            <a href="#home" className="hover:opacity-70 transition">{t('nav.home')}</a>
+            <a href="#features" className="hover:opacity-70 transition">{t('nav.features')}</a>
+            <a href="#howto" className="hover:opacity-70 transition">{t('nav.howto')}</a>
+            <a href="#testimonials" className="hover:opacity-70 transition">{t('nav.testimonials')}</a>
+            <Link href="/download" className="hover:opacity-70 transition">{t('nav.download')}</Link>
+          </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-shrink-0">
             <LanguageSwitcher variant="light" />
             <Link
               href="/download"
-              className="px-5 py-2.5 rounded-xl font-black text-sm text-[#0a0e1a] shadow-lg shadow-emerald-500/30 hover:scale-105 transition"
-              style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
+              className="px-5 py-2.5 rounded-xl font-bold text-sm hover:scale-105 transition-all duration-300"
+              style={{
+                background: `linear-gradient(135deg, ${PALETTE.electric}, ${PALETTE.sky})`,
+                color: PALETTE.white,
+                boxShadow: '0 4px 16px rgba(37,99,235,0.5)',
+              }}
             >
-              {t('nav.download')}
+              {t('nav.cta')}
             </Link>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* ═════════ HERO ═════════ */}
-      <section className="relative min-h-[90vh] flex flex-col items-center justify-center pt-40 pb-24 px-6 text-center">
-        <div className="max-w-5xl mx-auto flex flex-col items-center">
-          {/* Badge */}
-          <div
-            className="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-full border"
-            style={{
-              backgroundColor: 'rgba(16,185,129,0.08)',
-              borderColor: 'rgba(16,185,129,0.3)',
-            }}
-          >
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-            </span>
-            <span className="text-xs font-black uppercase tracking-widest text-emerald-400">
-              {t('hero.badge')}
-            </span>
-          </div>
-
-          {/* Title */}
-          <h1
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.95] tracking-tighter mb-6"
-            style={{ color: '#f8fafc' }}
-          >
-            {t('hero.title1')} <br />
-            <span
-              style={{
-                backgroundImage: 'linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #ec4899 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                color: 'transparent',
-              }}
-            >
-              {t('hero.title2')}
-            </span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="text-lg sm:text-xl md:text-2xl max-w-3xl mb-12 leading-relaxed font-medium" style={{ color: '#94a3b8' }}>
-            {t('hero.subtitle')}
-          </p>
-
-          {/* CTA */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-16">
-            <Link
-              href="/download"
-              className="px-8 py-4 rounded-xl font-black text-base text-[#0a0e1a] shadow-2xl shadow-emerald-500/30 hover:scale-[1.03] active:scale-95 transition flex items-center gap-3"
-              style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
-            >
-              ⬇ {t('hero.install')}
-            </Link>
-            <a
-              href="#games"
-              className="px-8 py-4 rounded-xl font-bold text-base border backdrop-blur transition flex items-center gap-3"
-              style={{
-                backgroundColor: 'rgba(15,23,42,0.6)',
-                borderColor: 'rgba(255,255,255,0.1)',
-                color: '#e7e9ee',
-              }}
-            >
-              {t('hero.explore')} →
-            </a>
-          </div>
-
-          {/* Stats strip */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl">
-            {[
-              { v: '10', l: t('stats.games') },
-              { v: '3', l: t('stats.languages') },
-              { v: '8', l: t('stats.bots') },
-              { v: '0€', l: t('stats.free') },
-            ].map((s) => (
-              <div
-                key={s.l}
-                className="p-5 rounded-2xl backdrop-blur-md border"
-                style={{
-                  backgroundColor: 'rgba(15,23,42,0.5)',
-                  borderColor: 'rgba(255,255,255,0.08)',
-                }}
-              >
-                <div
-                  className="text-3xl md:text-4xl font-black mb-1"
-                  style={{
-                    backgroundImage: 'linear-gradient(135deg, #10b981, #06b6d4)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    color: 'transparent',
-                  }}
-                >
-                  {s.v}
-                </div>
-                <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#94a3b8' }}>
-                  {s.l}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═════════ GAMES GRID ═════════ */}
-      <section id="games" className="relative py-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <ScrollReveal>
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ color: '#f8fafc' }}>
-                {t('games.title')}
-              </h2>
-              <p className="text-base md:text-lg max-w-2xl mx-auto" style={{ color: '#94a3b8' }}>
-                {t('games.subtitle')}
-              </p>
-              <div
-                className="h-1.5 w-24 mx-auto mt-6 rounded-full"
-                style={{ background: 'linear-gradient(90deg, #10b981, #06b6d4)' }}
-              />
-            </div>
-          </ScrollReveal>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
-            {GAMES.map((g, i) => (
-              <ScrollReveal key={g.slug} delay={i * 50}>
-                <GameCardPremium game={g} lang={lang} t={t} />
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═════════ FEATURES ═════════ */}
-      <section id="features" className="relative py-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <ScrollReveal>
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ color: '#f8fafc' }}>
-                {t('features.title')}
-              </h2>
-              <p className="text-base md:text-lg max-w-2xl mx-auto" style={{ color: '#94a3b8' }}>
-                {t('features.subtitle')}
-              </p>
-            </div>
-          </ScrollReveal>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES_KEYS.map((f, i) => (
-              <ScrollReveal key={f.titleKey} delay={i * 60}>
-                <div
-                  className="p-7 rounded-2xl backdrop-blur-md border h-full transition hover:-translate-y-1"
-                  style={{
-                    backgroundColor: 'rgba(15,23,42,0.5)',
-                    borderColor: 'rgba(255,255,255,0.08)',
-                  }}
-                >
-                  <div
-                    className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5"
-                    style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.15))', border: '1px solid rgba(16,185,129,0.3)' }}
-                  >
-                    {f.glyph}
-                  </div>
-                  <h3 className="text-xl font-black mb-2" style={{ color: '#f8fafc' }}>{t(f.titleKey)}</h3>
-                  <p className="leading-relaxed" style={{ color: '#94a3b8' }}>{t(f.descKey)}</p>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═════════ HOW IT WORKS ═════════ */}
-      <section id="how" className="relative py-24 px-6">
-        <div className="max-w-6xl mx-auto">
-          <ScrollReveal>
-            <h2 className="text-4xl md:text-5xl font-black mb-16 text-center tracking-tight" style={{ color: '#f8fafc' }}>
-              {t('how.title')}
-            </h2>
-          </ScrollReveal>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { n: '01', tKey: 'how.step1', glyph: '⬇' },
-              { n: '02', tKey: 'how.step2', glyph: '⚙️' },
-              { n: '03', tKey: 'how.step3', glyph: '🎮' },
-            ].map((step, i) => (
-              <ScrollReveal key={step.n} delay={i * 100}>
-                <div
-                  className="p-7 rounded-2xl backdrop-blur-md border text-center h-full"
-                  style={{
-                    backgroundColor: 'rgba(15,23,42,0.5)',
-                    borderColor: 'rgba(255,255,255,0.08)',
-                  }}
-                >
-                  <div
-                    className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center text-3xl mb-6"
-                    style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
-                  >
-                    {step.glyph}
-                  </div>
-                  <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: '#10b981' }}>
-                    {step.n}
-                  </div>
-                  <h3 className="text-xl font-black mb-3" style={{ color: '#f8fafc' }}>{t(`${step.tKey}.title`)}</h3>
-                  <p className="leading-relaxed" style={{ color: '#94a3b8' }}>{t(`${step.tKey}.desc`)}</p>
-                </div>
-              </ScrollReveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═════════ FAQ ═════════ */}
-      <section className="relative py-24 px-6">
-        <div className="max-w-4xl mx-auto">
-          <ScrollReveal>
-            <div className="text-center mb-12">
-              <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ color: '#f8fafc' }}>
-                {t('faq.title')}
-              </h2>
-              <p className="text-base md:text-lg" style={{ color: '#94a3b8' }}>{t('faq.subtitle')}</p>
-            </div>
-          </ScrollReveal>
-
-          <div className="flex flex-col gap-3">
-            {faqs.map((faq, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border overflow-hidden backdrop-blur-md"
-                style={{
-                  backgroundColor: 'rgba(15,23,42,0.5)',
-                  borderColor: 'rgba(255,255,255,0.08)',
-                }}
-              >
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full p-6 flex items-center justify-between text-start hover:bg-white/5 transition"
-                >
-                  <span className="text-base md:text-lg font-bold pe-4" style={{ color: '#f8fafc' }}>
-                    {faq.q}
-                  </span>
-                  <span
-                    className="text-2xl flex-shrink-0 transition-transform duration-300"
-                    style={{
-                      color: '#10b981',
-                      transform: openFaq === i ? 'rotate(45deg)' : 'rotate(0deg)',
-                    }}
-                  >
-                    +
-                  </span>
-                </button>
-                <div
-                  className="overflow-hidden transition-all duration-300"
-                  style={{
-                    maxHeight: openFaq === i ? '500px' : '0px',
-                    opacity: openFaq === i ? 1 : 0,
-                  }}
-                >
-                  <p className="px-6 pb-6 leading-relaxed" style={{ color: '#94a3b8' }}>{faq.a}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═════════ CTA FINAL ═════════ */}
-      <section className="relative py-24 px-6">
-        <div
-          className="max-w-4xl mx-auto p-10 md:p-16 rounded-3xl text-center backdrop-blur-md border"
-          style={{
-            backgroundColor: 'rgba(15,23,42,0.5)',
-            borderColor: 'rgba(16,185,129,0.3)',
-            background:
-              'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(6,182,212,0.1) 50%, rgba(236,72,153,0.05) 100%)',
-          }}
-        >
-          <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ color: '#f8fafc' }}>
-            {t('cta.title')}
-          </h2>
-          <p className="text-lg mb-8" style={{ color: '#94a3b8' }}>{t('cta.subtitle')}</p>
-          <Link
-            href="/download"
-            className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-black text-base text-[#0a0e1a] shadow-2xl shadow-emerald-500/30 hover:scale-[1.03] transition"
-            style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
-          >
-            ⬇ {t('nav.download')}
-          </Link>
-        </div>
-      </section>
-
-      {/* ═════════ FOOTER ═════════ */}
-      <footer
-        className="relative py-16 px-6 border-t"
-        style={{
-          backgroundColor: 'rgba(10,14,26,0.8)',
-          borderColor: 'rgba(255,255,255,0.06)',
-        }}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/*  2️⃣ HERO                                                         */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <section
+        id="home"
+        className="relative min-h-screen flex items-center px-8 lg:px-20 pt-28 pb-24 overflow-hidden"
       >
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
-            <div className="col-span-2 md:col-span-1">
-              <div className="flex items-center gap-3 mb-4">
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
-                >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="3" />
-                    <path d="M12 8v8M8 12h8" />
-                  </svg>
-                </div>
-                <span className="text-xl font-black" style={{ color: '#f8fafc' }}>
-                  Sally<span style={{ color: '#10b981' }}>Cards</span>
+        {/* Card-suit watermark */}
+        <SuitMotif suit="♠" className="text-[24rem] -top-20 -start-10" />
+        <SuitMotif suit="♥" className="text-[18rem] top-40 end-1/3" />
+        <SuitMotif suit="♦" className="text-[22rem] bottom-10 end-20" />
+        <SuitMotif suit="♣" className="text-[20rem] -bottom-20 -start-20" />
+
+        <div className="relative max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-16 items-center">
+          {/* Left: text */}
+          <Reveal>
+            <div className={isRtl ? 'text-right' : 'text-left'}>
+              <div
+                className="inline-flex items-center gap-2.5 mb-8 px-5 py-2.5 rounded-full border"
+                style={{
+                  backgroundColor: 'rgba(252,211,77,0.12)',
+                  borderColor: 'rgba(252,211,77,0.4)',
+                }}
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping" style={{ background: PALETTE.gold }} />
+                  <span className="relative inline-flex rounded-full h-2 w-2" style={{ background: PALETTE.gold }} />
+                </span>
+                <span className="text-xs font-bold tracking-widest uppercase" style={{ color: PALETTE.gold }}>
+                  {t('hero.tag')}
                 </span>
               </div>
-              <p className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
-                {t('footer.desc')}
+
+              <h1
+                className="font-black tracking-tight mb-6"
+                style={{
+                  fontFamily: titleFont,
+                  fontSize: 'clamp(3rem, 6vw, 5rem)',
+                  lineHeight: 1.05,
+                  color: PALETTE.white,
+                }}
+              >
+                {t('hero.title')}
+                <br />
+                <span className="gold-shine">{t('hero.titleAccent')}</span>
+              </h1>
+
+              <p
+                className="max-w-xl mb-10 leading-relaxed"
+                style={{ fontSize: 'clamp(1.05rem, 1.5vw, 1.4rem)', color: 'rgba(248,250,252,0.85)' }}
+              >
+                {t('hero.subtitle')}
+              </p>
+
+              <div className="flex flex-wrap gap-4">
+                <StoreButton
+                  variant="google"
+                  topLine={t('hero.android')}
+                  store={t('hero.androidStore')}
+                  href="/download"
+                  badge={t('common.available')}
+                />
+                <StoreButton
+                  variant="apple"
+                  topLine={t('hero.ios')}
+                  store={t('hero.iosStore')}
+                  href="#"
+                  disabled
+                  badge={t('common.soon')}
+                  onClick={(e) => e.preventDefault()}
+                />
+              </div>
+
+              <div
+                className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-6 text-xs font-medium"
+                style={{ color: 'rgba(248,250,252,0.65)' }}
+              >
+                <span>✓ {t('hero.androidStatus')}</span>
+                <span>○ {t('hero.iosStatus')}</span>
+              </div>
+            </div>
+          </Reveal>
+
+          {/* Right: phone mockup + floating cards */}
+          <Reveal delay={200}>
+            <div className="relative flex justify-center items-center h-[520px]">
+              {/* Phone frame */}
+              <div
+                className="relative w-[280px] h-[560px] rounded-[3rem] p-3 z-10"
+                style={{
+                  background: 'linear-gradient(135deg, #1A1A1A 0%, #0A0A0A 100%)',
+                  boxShadow: '0 30px 80px rgba(10,31,68,0.6), 0 0 0 1px rgba(255,255,255,0.06)',
+                }}
+              >
+                <div
+                  className="w-full h-full rounded-[2.5rem] overflow-hidden flex flex-col items-center justify-center"
+                  style={{
+                    background: `linear-gradient(160deg, ${PALETTE.navy} 0%, ${PALETTE.electric} 100%)`,
+                  }}
+                >
+                  <Image
+                    src="/solitaire-icon.png"
+                    alt="Sally Solitaire"
+                    width={140}
+                    height={140}
+                    className="rounded-3xl shadow-2xl mb-6"
+                    style={{ boxShadow: '0 20px 50px rgba(0,0,0,0.4)' }}
+                    unoptimized
+                    priority
+                  />
+                  <p className="font-black text-xl text-white" style={{ fontFamily: titleFont }}>
+                    Sally Solitaire
+                  </p>
+                  <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
+                    192 variantes
+                  </p>
+                  <div className="mt-5 flex gap-1.5">
+                    {[0, 1, 2, 3].map((i) => (
+                      <span
+                        key={i}
+                        className="w-2 h-2 rounded-full"
+                        style={{
+                          background: i === 0 ? PALETTE.gold : 'rgba(255,255,255,0.3)',
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                {/* Phone notch */}
+                <div
+                  className="absolute top-1.5 left-1/2 -translate-x-1/2 w-32 h-6 rounded-b-2xl"
+                  style={{ background: '#000' }}
+                />
+              </div>
+
+              {/* Floating decorative cards */}
+              <FloatingCard suit="♠" value="A" className="top-0 -start-8" delay={0} rotate={-14} />
+              <FloatingCard suit="♥" value="K" className="top-10 -end-4" delay={1.5} rotate={12} />
+              <FloatingCard suit="♦" value="Q" className="bottom-8 -start-4" delay={3} rotate={-6} />
+              <FloatingCard suit="♣" value="J" className="-bottom-2 -end-10" delay={2} rotate={10} />
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/*  3️⃣ FEATURES                                                     */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <section id="features" className="relative px-8 lg:px-20 py-32">
+        <SuitMotif suit="♣" className="text-[26rem] -top-20 -end-20" />
+        <div className="relative max-w-7xl mx-auto">
+          <Reveal>
+            <div className="text-center mb-20 max-w-3xl mx-auto">
+              <h2
+                className="font-black mb-6"
+                style={{
+                  fontFamily: titleFont,
+                  fontSize: 'clamp(2.25rem, 4vw, 3.5rem)',
+                  lineHeight: 1.15,
+                  color: PALETTE.white,
+                }}
+              >
+                {t('feat.title')}
+              </h2>
+              <p className="text-lg leading-relaxed" style={{ color: 'rgba(248,250,252,0.8)' }}>
+                {t('feat.subtitle')}
+              </p>
+            </div>
+          </Reveal>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              { suit: '♠', tKey: 'multiplayer' },
+              { suit: '♥', tKey: 'tournaments' },
+              { suit: '♦', tKey: 'rewards' },
+              { suit: '♣', tKey: 'offline' },
+              { suit: '★', tKey: 'graphics' },
+              { suit: '◆', tKey: 'ranking' },
+            ].map((f, i) => (
+              <Reveal key={f.tKey} delay={i * 80}>
+                <div
+                  className="p-10 rounded-2xl border h-full transition-all duration-300 hover:-translate-y-2"
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                    boxShadow: '0 8px 32px rgba(10,31,68,0.2)',
+                  }}
+                >
+                  <div
+                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-6"
+                    style={{
+                      background: `linear-gradient(135deg, ${PALETTE.electric}, ${PALETTE.sky})`,
+                      boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
+                    }}
+                  >
+                    {f.suit}
+                  </div>
+                  <h3
+                    className="text-2xl font-bold mb-4"
+                    style={{ fontFamily: titleFont, color: PALETTE.white }}
+                  >
+                    {t(`feat.${f.tKey}.t`)}
+                  </h3>
+                  <p className="text-base leading-relaxed" style={{ color: 'rgba(248,250,252,0.75)' }}>
+                    {t(`feat.${f.tKey}.d`)}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/*  4️⃣ HOW TO PLAY                                                  */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <section id="howto" className="relative px-8 lg:px-20 py-32">
+        <SuitMotif suit="♦" className="text-[20rem] top-1/2 start-1/2" />
+        <div className="relative max-w-6xl mx-auto">
+          <Reveal>
+            <div className="text-center mb-20 max-w-3xl mx-auto">
+              <h2
+                className="font-black mb-6"
+                style={{
+                  fontFamily: titleFont,
+                  fontSize: 'clamp(2.25rem, 4vw, 3.5rem)',
+                  lineHeight: 1.15,
+                  color: PALETTE.white,
+                }}
+              >
+                {t('how.title')}
+              </h2>
+              <p className="text-lg" style={{ color: 'rgba(248,250,252,0.8)' }}>{t('how.subtitle')}</p>
+            </div>
+          </Reveal>
+
+          <div className="relative grid md:grid-cols-3 gap-10">
+            {/* Connector line (decorative, hidden on mobile) */}
+            <div
+              aria-hidden
+              className="hidden md:block absolute top-12 start-[16.66%] end-[16.66%] h-px"
+              style={{
+                background: `repeating-linear-gradient(90deg, ${PALETTE.gold} 0 8px, transparent 8px 16px)`,
+                opacity: 0.5,
+              }}
+            />
+            {[1, 2, 3].map((n, i) => (
+              <Reveal key={n} delay={i * 150}>
+                <div className="relative text-center flex flex-col items-center">
+                  <div
+                    className="w-24 h-24 rounded-full flex items-center justify-center font-black text-3xl mb-6 relative z-10 border-4"
+                    style={{
+                      background: `linear-gradient(135deg, ${PALETTE.electric}, ${PALETTE.sky})`,
+                      borderColor: PALETTE.navy,
+                      color: PALETTE.white,
+                      fontFamily: titleFont,
+                      boxShadow: '0 8px 32px rgba(37,99,235,0.5)',
+                    }}
+                  >
+                    {n}
+                  </div>
+                  <h3
+                    className="text-2xl font-bold mb-3"
+                    style={{ fontFamily: titleFont, color: PALETTE.white }}
+                  >
+                    {t(`how.step${n}.t`)}
+                  </h3>
+                  <p className="text-base leading-relaxed max-w-xs" style={{ color: 'rgba(248,250,252,0.75)' }}>
+                    {t(`how.step${n}.d`)}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/*  5️⃣ SCREENSHOTS                                                  */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <section id="screens" className="relative px-8 lg:px-20 py-32">
+        <div className="relative max-w-7xl mx-auto">
+          <Reveal>
+            <div className="text-center mb-20 max-w-3xl mx-auto">
+              <h2
+                className="font-black mb-6"
+                style={{
+                  fontFamily: titleFont,
+                  fontSize: 'clamp(2.25rem, 4vw, 3.5rem)',
+                  lineHeight: 1.15,
+                  color: PALETTE.white,
+                }}
+              >
+                {t('screens.title')}
+              </h2>
+              <p className="text-lg" style={{ color: 'rgba(248,250,252,0.8)' }}>{t('screens.subtitle')}</p>
+            </div>
+          </Reveal>
+
+          <div className="flex justify-center items-end gap-6 flex-wrap">
+            {[
+              { tilt: -8, color: `linear-gradient(160deg, ${PALETTE.navy}, ${PALETTE.electric})`, label: 'Solitaire' },
+              { tilt: 0, color: `linear-gradient(160deg, ${PALETTE.royal}, ${PALETTE.sky})`, label: 'Daily' },
+              { tilt: 6, color: `linear-gradient(160deg, ${PALETTE.electric}, ${PALETTE.gold})`, label: 'Win' },
+              { tilt: -4, color: `linear-gradient(160deg, ${PALETTE.sky}, ${PALETTE.ivory})`, label: 'Stats' },
+            ].map((s, i) => (
+              <Reveal key={i} delay={i * 100}>
+                <div
+                  className="w-[220px] h-[440px] rounded-[2.5rem] p-2.5 transition-transform duration-300 hover:scale-105"
+                  style={{
+                    background: '#0A0A0A',
+                    transform: `rotate(${s.tilt}deg)`,
+                    boxShadow: '0 20px 60px rgba(10,31,68,0.5)',
+                  }}
+                >
+                  <div
+                    className="w-full h-full rounded-[2rem] flex flex-col items-center justify-center text-white"
+                    style={{ background: s.color }}
+                  >
+                    <span className="text-6xl mb-4">♠</span>
+                    <p className="font-bold text-lg" style={{ fontFamily: titleFont }}>
+                      {s.label}
+                    </p>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/*  6️⃣ TESTIMONIALS                                                 */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <section
+        id="testimonials"
+        className="relative px-8 lg:px-20 py-32"
+        style={{ background: 'rgba(255,255,255,0.03)' }}
+      >
+        <div className="relative max-w-7xl mx-auto">
+          <Reveal>
+            <div className="text-center mb-20 max-w-3xl mx-auto">
+              <h2
+                className="font-black mb-6"
+                style={{
+                  fontFamily: titleFont,
+                  fontSize: 'clamp(2.25rem, 4vw, 3.5rem)',
+                  lineHeight: 1.15,
+                  color: PALETTE.white,
+                }}
+              >
+                {t('testi.title')}
+              </h2>
+              <p className="text-lg" style={{ color: 'rgba(248,250,252,0.8)' }}>{t('testi.subtitle')}</p>
+            </div>
+          </Reveal>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((n, i) => (
+              <Reveal key={n} delay={i * 100}>
+                <div
+                  className="p-8 rounded-2xl border h-full flex flex-col"
+                  style={{
+                    background: 'rgba(255,255,255,0.08)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderColor: 'rgba(255,255,255,0.1)',
+                  }}
+                >
+                  <div className="flex items-center gap-1 mb-5" style={{ color: PALETTE.gold }}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <span key={s} className="text-xl">★</span>
+                    ))}
+                  </div>
+                  <p className="text-base leading-relaxed mb-6 flex-1" style={{ color: 'rgba(248,250,252,0.9)' }}>
+                    « {t(`testi.${n}.text`)} »
+                  </p>
+                  <div className="flex items-center gap-4 pt-5 border-t" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center font-black text-lg"
+                      style={{
+                        background: `linear-gradient(135deg, ${PALETTE.electric}, ${PALETTE.sky})`,
+                        color: PALETTE.white,
+                      }}
+                    >
+                      {t(`testi.${n}.name`).charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-bold" style={{ color: PALETTE.white }}>{t(`testi.${n}.name`)}</p>
+                      <p className="text-xs" style={{ color: 'rgba(248,250,252,0.6)' }}>{t(`testi.${n}.role`)}</p>
+                    </div>
+                  </div>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/*  7️⃣ STATS                                                        */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <section className="relative px-8 lg:px-20 py-24">
+        <div className="relative max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10">
+          {[
+            { value: <><Counter to={250} suffix="+" /></>, label: t('stats.players') },
+            { value: <><Counter to={48} suffix="" />/<span style={{ opacity: 0.5 }}>5</span></>, label: t('stats.rating') },
+            { value: <><Counter to={12} suffix="+" /></>, label: t('stats.countries') },
+            { value: '100%', label: t('stats.free') },
+          ].map((s, i) => (
+            <Reveal key={i} delay={i * 80}>
+              <div className="text-center">
+                <div
+                  className="font-black mb-3"
+                  style={{
+                    fontFamily: titleFont,
+                    fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                    lineHeight: 1,
+                    color: PALETTE.gold,
+                  }}
+                >
+                  {s.value}
+                </div>
+                <div
+                  className="text-sm font-bold tracking-widest uppercase"
+                  style={{ color: 'rgba(248,250,252,0.85)' }}
+                >
+                  {s.label}
+                </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/*  8️⃣ FINAL CTA                                                    */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <section className="relative px-8 lg:px-20 py-32 overflow-hidden">
+        <SuitMotif suit="♠" className="text-[28rem] top-0 -start-20" />
+        <SuitMotif suit="♥" className="text-[26rem] bottom-0 -end-20" />
+        <div className="relative max-w-5xl mx-auto">
+          <Reveal>
+            <div
+              className="rounded-[2.5rem] p-12 lg:p-20 text-center"
+              style={{
+                background: `linear-gradient(135deg, ${PALETTE.navy} 0%, ${PALETTE.electric} 100%)`,
+                boxShadow: '0 30px 80px rgba(10,31,68,0.4), 0 0 0 1px rgba(255,255,255,0.06)',
+              }}
+            >
+              <h2
+                className="font-black mb-5"
+                style={{
+                  fontFamily: titleFont,
+                  fontSize: 'clamp(2.5rem, 5vw, 4rem)',
+                  lineHeight: 1.1,
+                  color: PALETTE.white,
+                }}
+              >
+                {t('cta.title')}
+              </h2>
+              <p className="text-lg mb-10 max-w-2xl mx-auto" style={{ color: 'rgba(248,250,252,0.85)' }}>
+                {t('cta.subtitle')}
+              </p>
+              <div className="flex flex-wrap justify-center gap-4">
+                <StoreButton
+                  variant="google"
+                  topLine={t('hero.android')}
+                  store={t('hero.androidStore')}
+                  href="/download"
+                  badge={t('common.available')}
+                />
+                <StoreButton
+                  variant="apple"
+                  topLine={t('hero.ios')}
+                  store={t('hero.iosStore')}
+                  href="#"
+                  disabled
+                  badge={t('common.soon')}
+                  onClick={(e) => e.preventDefault()}
+                />
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/*  9️⃣ FOOTER                                                       */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      <footer
+        id="contact"
+        className="relative px-8 lg:px-20 pt-20 pb-10"
+        style={{ background: PALETTE.navy, color: PALETTE.white }}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-14">
+            <div>
+              <div className="flex items-center gap-3 mb-5">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl"
+                  style={{ background: `linear-gradient(135deg, ${PALETTE.electric}, ${PALETTE.sky})` }}
+                >
+                  ♠
+                </div>
+                <span className="text-xl font-black" style={{ color: PALETTE.white, fontFamily: titleFont }}>
+                  Sally<span style={{ color: PALETTE.gold }}>Cards</span>
+                </span>
+              </div>
+              <p className="text-sm leading-relaxed" style={{ color: 'rgba(248,250,252,0.7)' }}>
+                {t('footer.aboutText')}
               </p>
             </div>
 
-            <FooterColumn title={t('footer.games')} items={GAMES.slice(0, 5).map((g) => g.name)} />
-            <FooterColumn title={t('footer.platform')} items={['Android', 'iOS', t('footer.api'), t('footer.status')]} />
-            <FooterColumn title={t('footer.legal')} items={[t('footer.privacy'), t('footer.terms'), t('footer.contact')]} />
+            <FooterCol
+              title={t('footer.links')}
+              items={[
+                { label: t('footer.linkHome'), href: '#home' },
+                { label: t('footer.linkDownload'), href: '/download' },
+                { label: t('footer.linkBlog'), href: '#' },
+                { label: t('footer.linkPress'), href: '#' },
+              ]}
+            />
+            <FooterCol
+              title={t('footer.support')}
+              items={[
+                { label: t('footer.supportContact'), href: 'mailto:salistarcompany@gmail.com' },
+                { label: t('footer.supportFaq'), href: '#features' },
+                { label: t('footer.supportApi'), href: 'https://api.salistar.com/api/docs' },
+                { label: t('footer.supportStatus'), href: 'https://salistar.com/#monitoring' },
+              ]}
+            />
+            <div>
+              <h4 className="font-black uppercase text-xs tracking-widest mb-5" style={{ color: PALETTE.white }}>
+                {t('footer.social')}
+              </h4>
+              <div className="flex gap-3 flex-wrap">
+                {[
+                  { name: 'GitHub', href: 'https://github.com/salistar' },
+                  { name: 'Twitter', href: '#' },
+                  { name: 'Instagram', href: '#' },
+                  { name: 'YouTube', href: '#' },
+                  { name: 'TikTok', href: '#' },
+                ].map((s) => (
+                  <a
+                    key={s.name}
+                    href={s.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold border transition hover:scale-110"
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      borderColor: 'rgba(255,255,255,0.1)',
+                      color: PALETTE.white,
+                    }}
+                  >
+                    {s.name.charAt(0)}
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
+
           <div
-            className="pt-8 border-t text-center text-xs font-bold uppercase tracking-widest"
-            style={{
-              borderColor: 'rgba(255,255,255,0.06)',
-              color: '#64748b',
-            }}
+            className="pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4 text-xs"
+            style={{ borderColor: 'rgba(255,255,255,0.08)', color: 'rgba(248,250,252,0.6)' }}
           >
-            © 2026 SallyCards · Made by SallyStar in Casablanca
+            <span>{t('footer.legal')}</span>
+            <div className="flex gap-6">
+              <a href="#" className="hover:text-white transition">{t('footer.privacy')}</a>
+              <a href="#" className="hover:text-white transition">{t('footer.terms')}</a>
+            </div>
           </div>
         </div>
       </footer>
@@ -609,115 +959,23 @@ export default function HomePage() {
   );
 }
 
-// ─── Game card component (premium dark, two states) ───────────────────────
-function GameCardPremium({
-  game,
-  lang,
-  t,
-}: {
-  game: GameInfo;
-  lang: 'fr' | 'en' | 'ar';
-  t: (k: string) => string;
-}) {
-  const isAvailable = game.available;
-  return (
-    <div
-      className={`relative p-5 rounded-2xl backdrop-blur-md border transition-all duration-300 ${
-        isAvailable
-          ? 'hover:-translate-y-2 hover:shadow-2xl hover:shadow-emerald-500/20'
-          : 'opacity-75 hover:opacity-90'
-      } group`}
-      style={{
-        backgroundColor: isAvailable ? 'rgba(15,23,42,0.7)' : 'rgba(15,23,42,0.4)',
-        borderColor: isAvailable ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.06)',
-        boxShadow: isAvailable ? '0 4px 32px rgba(16,185,129,0.15)' : undefined,
-      }}
-    >
-      {/* State badge */}
-      <div
-        className="absolute top-3 end-3 px-2.5 py-1 rounded-full text-[10px] font-black tracking-widest uppercase"
-        style={{
-          backgroundColor: isAvailable ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
-          color: isAvailable ? '#10b981' : '#f59e0b',
-          border: `1px solid ${isAvailable ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)'}`,
-        }}
-      >
-        {isAvailable ? (
-          <>
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 me-1.5 animate-pulse" />
-            {t('games.available')}
-          </>
-        ) : (
-          t('games.comingSoon')
-        )}
-      </div>
-
-      {/* Icon */}
-      <div
-        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mt-3 overflow-hidden"
-        style={{ background: game.gradient }}
-      >
-        {game.iconSrc ? (
-          <Image
-            src={game.iconSrc}
-            alt={game.name}
-            width={56}
-            height={56}
-            className="rounded-xl"
-            unoptimized
-          />
-        ) : (
-          <span className="text-3xl">{game.glyph}</span>
-        )}
-      </div>
-
-      <h3 className="text-lg font-black mb-1" style={{ color: '#f8fafc' }}>
-        {game.name}
-      </h3>
-      <p className="text-xs mb-3 font-mono" style={{ color: '#10b981' }}>
-        {game.players} {t('games.players')}
-      </p>
-      <p className="text-sm leading-relaxed mb-4 min-h-[3.5rem]" style={{ color: '#94a3b8' }}>
-        {game.desc[lang]}
-      </p>
-
-      {/* Button */}
-      {isAvailable ? (
-        <Link
-          href="/download"
-          className="block w-full text-center py-2.5 rounded-xl text-sm font-black text-[#0a0e1a] transition hover:scale-[1.02]"
-          style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
-        >
-          ⬇ {t('games.downloadNow')}
-        </Link>
-      ) : (
-        <button
-          disabled
-          className="block w-full text-center py-2.5 rounded-xl text-sm font-bold border cursor-not-allowed"
-          style={{
-            backgroundColor: 'rgba(255,255,255,0.03)',
-            borderColor: 'rgba(255,255,255,0.08)',
-            color: '#64748b',
-          }}
-        >
-          🔔 {t('games.notify')}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function FooterColumn({ title, items }: { title: string; items: string[] }) {
+function FooterCol({ title, items }: { title: string; items: { label: string; href: string }[] }) {
   return (
     <div>
-      <h4 className="font-black uppercase text-xs tracking-widest mb-4" style={{ color: '#f8fafc' }}>
+      <h4 className="font-black uppercase text-xs tracking-widest mb-5" style={{ color: PALETTE.white }}>
         {title}
       </h4>
-      <ul className="flex flex-col gap-2">
+      <ul className="flex flex-col gap-3">
         {items.map((i) => (
-          <li key={i}>
-            <a href="#" className="text-sm hover:text-white transition" style={{ color: '#94a3b8' }}>
-              {i}
+          <li key={i.label}>
+            <a
+              href={i.href}
+              className="text-sm transition"
+              style={{ color: 'rgba(248,250,252,0.75)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = PALETTE.gold)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(248,250,252,0.75)')}
+            >
+              {i.label}
             </a>
           </li>
         ))}
