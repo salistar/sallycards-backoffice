@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import { BrandLogo } from '../components/BrandLogo';
 import { GAMES } from '../lib/games';
 
 const C = {
@@ -98,21 +99,8 @@ export default function DownloadIndexPage() {
           }}
         >
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', flexShrink: 0 }}>
-            <div
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                background: `linear-gradient(135deg, ${C.bluePrimary}, ${C.blueLight})`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '22px',
-                color: C.white,
-                border: `1.5px solid ${C.gold}40`,
-              }}
-            >
-              ♠
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '52px', height: '52px' }}>
+              <BrandLogo size={24} />
             </div>
             <span style={{ fontFamily: titleFont, fontSize: '22px', fontWeight: 900, color: C.white, letterSpacing: '-0.02em' }}>
               Sally<span style={{ color: C.gold }}>Cards</span>

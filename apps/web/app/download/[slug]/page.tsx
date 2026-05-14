@@ -20,6 +20,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
+import { BrandLogo } from '../../components/BrandLogo';
 import { getGame, GAMES } from '../../lib/games';
 import { notFound } from 'next/navigation';
 
@@ -156,21 +157,8 @@ export default function GameDownloadPage({ params }: { params: Promise<{ slug: s
           }}
         >
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', flexShrink: 0 }}>
-            <div
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                background: `linear-gradient(135deg, ${C.bluePrimary}, ${C.blueLight})`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '22px',
-                color: C.white,
-                border: `1.5px solid ${C.gold}40`,
-              }}
-            >
-              ♠
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '52px', height: '52px' }}>
+              <BrandLogo size={24} />
             </div>
             <span style={{ fontFamily: titleFont, fontSize: '22px', fontWeight: 900, color: C.white, letterSpacing: '-0.02em' }}>
               Sally<span style={{ color: C.gold }}>Cards</span>
@@ -246,29 +234,38 @@ export default function GameDownloadPage({ params }: { params: Promise<{ slug: s
             </span>
           </div>
 
-          {/* Icon (real mobile asset) */}
-          <div
-            style={{
-              width: '120px',
-              height: '120px',
-              borderRadius: '28px',
-              margin: '0 auto 24px',
-              overflow: 'hidden',
-              padding: '4px',
-              background: game.gradient,
-              boxShadow: '0 20px 60px rgba(10,21,53,0.5)',
-            }}
-          >
-            <Image
-              src={game.iconSrc}
-              alt={game.name}
-              width={120}
-              height={120}
-              style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '22px' }}
-              unoptimized
-              priority
-            />
-          </div>
+          {/* Hero icon — Solitaire uses the OFFICIAL BrandLogo (3-card fan
+              with Ace of Spades — the one shown on the language-select
+              screen and the splash screen of the mobile app). Other games
+              use their square PNG icon. */}
+          {game.slug === 'solitaire' ? (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+              <BrandLogo size={130} />
+            </div>
+          ) : (
+            <div
+              style={{
+                width: '120px',
+                height: '120px',
+                borderRadius: '28px',
+                margin: '0 auto 24px',
+                overflow: 'hidden',
+                padding: '4px',
+                background: game.gradient,
+                boxShadow: '0 20px 60px rgba(10,21,53,0.5)',
+              }}
+            >
+              <Image
+                src={game.iconSrc}
+                alt={game.name}
+                width={120}
+                height={120}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '22px' }}
+                unoptimized
+                priority
+              />
+            </div>
+          )}
 
           <h1
             className="gd-title"

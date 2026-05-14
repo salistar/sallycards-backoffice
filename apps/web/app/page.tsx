@@ -21,6 +21,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './components/LanguageSwitcher';
+import { BrandLogo } from './components/BrandLogo';
 import { GAMES } from './lib/games';
 
 // ───────────────────────────────────────────────────────────────────────
@@ -404,24 +405,18 @@ export default function HomePage() {
             gap: '24px',
           }}
         >
-          {/* Logo */}
+          {/* Logo — official BrandLogo (3-card fan with Ace of Spades) from mobile app */}
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', flexShrink: 0 }}>
             <div
               style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                background: `linear-gradient(135deg, ${C.bluePrimary}, ${C.blueLight})`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '22px',
-                color: C.white,
-                boxShadow: '0 4px 16px rgba(96,165,250,0.4)',
-                border: `1.5px solid ${C.gold}40`,
+                width: '52px',
+                height: '52px',
               }}
             >
-              ♠
+              <BrandLogo size={24} />
             </div>
             <span style={{ fontSize: '22px', fontWeight: 900, color: C.white, fontFamily: titleFont, letterSpacing: '-0.02em' }}>
               Sally<span style={{ color: C.gold }}>Cards</span>
@@ -649,60 +644,89 @@ export default function HomePage() {
                   zIndex: 5,
                 }}
               >
+                {/* Inside the phone screen: REAL language-select screen from the mobile app */}
                 <div
                   style={{
                     width: '100%',
                     height: '100%',
                     borderRadius: '34px',
-                    background: `linear-gradient(160deg, ${C.navyDeep} 0%, ${C.bluePrimary} 100%)`,
                     overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '24px',
-                    padding: '32px',
+                    position: 'relative',
                   }}
                 >
+                  {/* Background = the actual splash-cards.jpg used in the app */}
                   <div
                     style={{
-                      width: '140px',
-                      height: '140px',
-                      borderRadius: '32px',
-                      overflow: 'hidden',
-                      boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                      position: 'absolute',
+                      inset: 0,
+                      backgroundImage: `url(/hero/splash-cards.jpg)`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  />
+                  {/* Overlay gradient identical to mobile (welcome.tsx) */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background:
+                        'linear-gradient(180deg, rgba(10,10,26,0.88) 0%, rgba(30,27,75,0.95) 50%, rgba(59,7,100,0.95) 100%)',
+                    }}
+                  />
+                  {/* Content stack — exactly like welcome.tsx language picker */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '20px',
+                      padding: '24px',
                     }}
                   >
-                    <Image
-                      src="/games/solitaire.png"
-                      alt="Sally Solitaire"
-                      width={140}
-                      height={140}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      unoptimized
-                      priority
-                    />
-                  </div>
-                  <div style={{ textAlign: 'center' }}>
-                    <p style={{ fontFamily: titleFont, fontSize: '22px', fontWeight: 700, color: C.white, margin: 0 }}>
-                      Sally Solitaire
+                    {/* OFFICIAL BRAND LOGO — same as the mobile app */}
+                    <BrandLogo size={70} />
+
+                    <p
+                      style={{
+                        fontFamily: titleFont,
+                        fontSize: '22px',
+                        fontWeight: 800,
+                        color: C.white,
+                        margin: 0,
+                        textAlign: 'center',
+                      }}
+                    >
+                      Sally <span style={{ color: C.gold }}>Solitaire</span>
                     </p>
-                    <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: '6px 0 0' }}>
-                      192 variantes
-                    </p>
-                  </div>
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {[0, 1, 2, 3].map((i) => (
-                      <span
-                        key={i}
-                        style={{
-                          width: '6px',
-                          height: '6px',
-                          borderRadius: '999px',
-                          background: i === 0 ? C.gold : 'rgba(255,255,255,0.3)',
-                        }}
-                      />
-                    ))}
+
+                    {/* Mock language buttons (FR / EN / AR) */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+                      {[
+                        { code: 'fr', flag: '🇫🇷', label: 'Français' },
+                        { code: 'en', flag: '🇬🇧', label: 'English' },
+                        { code: 'ar', flag: '🇸🇦', label: 'العربية' },
+                      ].map((l, i) => (
+                        <div
+                          key={l.code}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 14px',
+                            borderRadius: '12px',
+                            background: i === 0 ? 'rgba(252,211,77,0.18)' : 'rgba(255,255,255,0.08)',
+                            border: `1px solid ${i === 0 ? 'rgba(252,211,77,0.5)' : 'rgba(255,255,255,0.12)'}`,
+                          }}
+                        >
+                          <span style={{ fontSize: '16px' }}>{l.flag}</span>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: C.white }}>{l.label}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 {/* Notch */}
@@ -1466,24 +1490,11 @@ export default function HomePage() {
             className="footer-cols"
             style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '48px', marginBottom: '60px' }}
           >
-            {/* Brand col */}
+            {/* Brand col — uses the official BrandLogo from the mobile app */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-                <div
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '12px',
-                    background: `linear-gradient(135deg, ${C.bluePrimary}, ${C.blueLight})`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '22px',
-                    color: C.white,
-                    border: `1.5px solid ${C.gold}40`,
-                  }}
-                >
-                  ♠
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '52px', height: '52px' }}>
+                  <BrandLogo size={24} />
                 </div>
                 <span style={{ fontFamily: titleFont, fontSize: '22px', fontWeight: 900, color: C.white }}>
                   Sally<span style={{ color: C.gold }}>Cards</span>
