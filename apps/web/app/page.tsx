@@ -1,67 +1,156 @@
+/**
+ * @file apps/web/app/page.tsx
+ * @description Homepage SallyCards (sallycards.salistar.com) — design dark
+ * premium, trilingue FR/EN/AR avec support RTL, 10 jeux affichés avec deux
+ * états clairs : "DISPONIBLE" (Solitaire avec icône mobile réelle + bouton
+ * download) ou "BIENTÔT" (badge orange, dimmed card, bouton "Notify me").
+ *
+ * Design system :
+ *   - bg #0a0e1a + grid-pattern + glow orbs animés (emerald, cyan, pink)
+ *   - Glassmorphism: rgba(15,23,42,0.6) + backdrop-blur(24px)
+ *   - Gradients : emerald → cyan, gold → pink (états)
+ *   - Typo : Inter, font-black, 7xl-8xl titles
+ *   - Animations : float, glow, scroll-reveal, hover lift
+ *
+ * Pas de modification du package.json (react-i18next déjà installé).
+ */
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
-import GameCard from './components/GameCard';
-import CardFan from './components/CardFan';
-import GameDetailModal from './components/GameDetailModal';
-import ScrollReveal from './components/ScrollReveal';
 import LanguageSwitcher from './components/LanguageSwitcher';
-import { GAMES, FEATURES, type GameInfo } from './data/games';
+import ScrollReveal from './components/ScrollReveal';
 
-function AnimatedCounter({ target, suffix = '' }: { target: string; suffix?: string }) {
-  const [count, setCount] = useState(0);
-  const [started, setStarted] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
+// ─── Game catalogue ─────────────────────────────────────────────────────
+// `available: true` → carte mise en avant avec bouton "Download" actif.
+// `available: false` → carte dimmed avec badge "Coming soon" + bouton désactivé.
 
-  const numericTarget = parseInt(target.replace(/[^0-9]/g, ''), 10);
-  const isPercent = target.includes('%');
-  const hasPlus = target.includes('+');
-
-  useEffect(() => {
-    if (!ref.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started) {
-          setStarted(true);
-        }
-      },
-      { threshold: 0.5 }
-    );
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [started]);
-
-  useEffect(() => {
-    if (!started) return;
-    const duration = 1500;
-    const steps = 40;
-    const increment = numericTarget / steps;
-    let current = 0;
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= numericTarget) {
-        setCount(numericTarget);
-        clearInterval(timer);
-      } else {
-        setCount(Math.floor(current));
-      }
-    }, duration / steps);
-    return () => clearInterval(timer);
-  }, [started, numericTarget]);
-
-  return (
-    <span ref={ref}>
-      {count}{isPercent ? '%' : ''}{hasPlus ? '+' : ''}{suffix}
-    </span>
-  );
+interface GameInfo {
+  slug: string;
+  name: string;
+  glyph: string;     // emoji ou caractère iconique pour la card (fallback si pas d'icône image)
+  iconSrc?: string;  // chemin d'icône (e.g. solitaire-icon.png), prend le pas sur glyph
+  desc: { fr: string; en: string; ar: string };
+  players: string;
+  gradient: string;
+  available: boolean;
 }
 
+const GAMES: GameInfo[] = [
+  {
+    slug: 'solitaire',
+    name: 'Solitaire',
+    glyph: '♦',
+    iconSrc: '/solitaire-icon.png',
+    desc: {
+      fr: '192 variantes (Klondike, Spider, FreeCell, TriPeaks…) + mode multijoueur P2P',
+      en: '192 variants (Klondike, Spider, FreeCell, TriPeaks…) + P2P multiplayer mode',
+      ar: '192 متغيراً (Klondike، Spider، FreeCell، TriPeaks…) + لعب جماعي P2P',
+    },
+    players: '1-4',
+    gradient: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+    available: true,
+  },
+  {
+    slug: 'ronda',
+    name: 'Ronda',
+    glyph: '🃏',
+    desc: { fr: 'Capture marocaine classique', en: 'Classic Moroccan capture', ar: 'لعبة التقاط مغربية كلاسيكية' },
+    players: '2-4',
+    gradient: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+    available: false,
+  },
+  {
+    slug: 'kdoub',
+    name: 'Kdoub',
+    glyph: '🤥',
+    desc: { fr: 'Bluff et contestation', en: 'Bluff and challenge', ar: 'خداع وتحدي' },
+    players: '3-6',
+    gradient: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)',
+    available: false,
+  },
+  {
+    slug: 'belote',
+    name: 'Belote',
+    glyph: '♣',
+    desc: { fr: 'Jeu de levées en équipe', en: 'Tricks-and-tactics team game', ar: 'لعبة جماعية بالحيل' },
+    players: '4',
+    gradient: 'linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)',
+    available: false,
+  },
+  {
+    slug: 'poker',
+    name: 'Poker',
+    glyph: '♠',
+    desc: { fr: "Texas Hold'em No-Limit", en: "Texas Hold'em No-Limit", ar: 'تكساس هولدم بدون حدود' },
+    players: '2-9',
+    gradient: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)',
+    available: false,
+  },
+  {
+    slug: 'tarot',
+    name: 'Tarot',
+    glyph: '👑',
+    desc: { fr: '78 cartes, 22 atouts', en: '78 cards, 22 trumps', ar: '78 ورقة، 22 أتو' },
+    players: '3-5',
+    gradient: 'linear-gradient(135deg, #ec4899 0%, #831843 100%)',
+    available: false,
+  },
+  {
+    slug: 'scopa',
+    name: 'Scopa',
+    glyph: '🪙',
+    desc: { fr: 'Capture italienne', en: 'Italian capture game', ar: 'لعبة التقاط إيطالية' },
+    players: '2-4',
+    gradient: 'linear-gradient(135deg, #f59e0b 0%, #b45309 100%)',
+    available: false,
+  },
+  {
+    slug: 'okey',
+    name: 'Okey',
+    glyph: '🎴',
+    desc: { fr: 'Rami turc avec tuiles', en: 'Turkish rummy with tiles', ar: 'رامي تركي بالقطع' },
+    players: '4',
+    gradient: 'linear-gradient(135deg, #06b6d4 0%, #0e7490 100%)',
+    available: false,
+  },
+  {
+    slug: 'memory',
+    name: 'Memory',
+    glyph: '🧠',
+    desc: { fr: 'Trouvez les paires', en: 'Find the pairs', ar: 'اعثر على الأزواج' },
+    players: '1-4',
+    gradient: 'linear-gradient(135deg, #84cc16 0%, #15803d 100%)',
+    available: false,
+  },
+  {
+    slug: 'qui-est-ce',
+    name: 'Qui-est-ce?',
+    glyph: '❓',
+    desc: { fr: 'Déduction oui/non', en: 'Yes/no deduction', ar: 'استنتاج بنعم/لا' },
+    players: '2',
+    gradient: 'linear-gradient(135deg, #6366f1 0%, #312e81 100%)',
+    available: false,
+  },
+];
+
+const FEATURES_KEYS: Array<{ glyph: string; titleKey: string; descKey: string }> = [
+  { glyph: '🌐', titleKey: 'feature.multiplayer.title', descKey: 'feature.multiplayer.desc' },
+  { glyph: '📴', titleKey: 'feature.offline.title', descKey: 'feature.offline.desc' },
+  { glyph: '🔒', titleKey: 'feature.privacy.title', descKey: 'feature.privacy.desc' },
+  { glyph: '🗣️', titleKey: 'feature.languages.title', descKey: 'feature.languages.desc' },
+  { glyph: '🛡️', titleKey: 'feature.fair.title', descKey: 'feature.fair.desc' },
+  { glyph: '📱', titleKey: 'feature.crossplatform.title', descKey: 'feature.crossplatform.desc' },
+];
+
 export default function HomePage() {
-  const { t } = useTranslation();
-  const [selectedGame, setSelectedGame] = useState<GameInfo | null>(null);
+  const { t, i18n } = useTranslation();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const lang = (i18n.language?.split('-')[0] ?? 'fr') as 'fr' | 'en' | 'ar';
+  const isRtl = lang === 'ar';
 
   const faqs = [
     { q: t('faq.q1'), a: t('faq.a1') },
@@ -73,461 +162,277 @@ export default function HomePage() {
   ];
 
   return (
-    <main style={{ minHeight: '100vh', width: '100%', overflowX: 'hidden', backgroundColor: '#ffffff' }}>
+    <main
+      dir={isRtl ? 'rtl' : 'ltr'}
+      className="min-h-screen w-full overflow-x-hidden relative"
+      style={{
+        backgroundColor: '#0a0e1a',
+        color: '#e7e9ee',
+        fontFamily: isRtl
+          ? "'Cairo', 'Inter', system-ui, sans-serif"
+          : "'Inter', system-ui, sans-serif",
+      }}
+    >
+      {/* ─── Grid pattern + glow orbs in fixed background ─── */}
+      <div
+        aria-hidden
+        className="fixed inset-0 -z-10 opacity-50"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, rgba(16,185,129,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(16,185,129,0.05) 1px, transparent 1px)',
+          backgroundSize: '64px 64px',
+        }}
+      />
+      <div
+        aria-hidden
+        className="fixed -z-10 rounded-full"
+        style={{
+          top: '-20%',
+          left: '-10%',
+          width: '600px',
+          height: '600px',
+          background: '#10b981',
+          filter: 'blur(120px)',
+          opacity: 0.25,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        aria-hidden
+        className="fixed -z-10 rounded-full"
+        style={{
+          top: '40%',
+          right: '-10%',
+          width: '700px',
+          height: '700px',
+          background: '#06b6d4',
+          filter: 'blur(140px)',
+          opacity: 0.2,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        aria-hidden
+        className="fixed -z-10 rounded-full"
+        style={{
+          bottom: '-20%',
+          left: '30%',
+          width: '600px',
+          height: '600px',
+          background: '#ec4899',
+          filter: 'blur(130px)',
+          opacity: 0.15,
+          pointerEvents: 'none',
+        }}
+      />
 
-      {/* ===== NAVBAR ===== */}
-      <nav style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 100,
-        backgroundColor: 'rgba(255,255,255,0.92)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderBottom: '1px solid #e5e7eb',
-      }}>
-        <div style={{
-          maxWidth: '1536px',
-          margin: '0 auto',
-          padding: '0 40px',
-          height: '80px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-            }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      {/* ═════════ NAVBAR ═════════ */}
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b"
+        style={{
+          backgroundColor: 'rgba(10,14,26,0.85)',
+          borderColor: 'rgba(255,255,255,0.06)',
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+              style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="3" />
                 <path d="M12 8v8M8 12h8" />
               </svg>
             </div>
-            <span style={{ fontSize: '22px', fontWeight: 900, color: '#111827', letterSpacing: '-0.03em' }}>
+            <span className="text-xl font-black tracking-tight" style={{ color: '#f8fafc' }}>
               Sally<span style={{ color: '#10b981' }}>Cards</span>
             </span>
           </Link>
 
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '40px',
-            fontSize: '13px',
-            fontWeight: 700,
-            color: '#6b7280',
-            textTransform: 'uppercase',
-            letterSpacing: '0.15em',
-          }}>
-            <a href="#games" style={{ color: 'inherit', textDecoration: 'none' }}>{t('nav.games')}</a>
-            <a href="#features" style={{ color: 'inherit', textDecoration: 'none' }}>{t('nav.features')}</a>
-            <a href="#how" style={{ color: 'inherit', textDecoration: 'none' }}>{t('nav.help')}</a>
+          <div
+            className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-widest"
+            style={{ color: '#94a3b8' }}
+          >
+            <a href="#games" className="hover:text-white transition-colors">{t('nav.games')}</a>
+            <a href="#features" className="hover:text-white transition-colors">{t('nav.features')}</a>
+            <a href="#how" className="hover:text-white transition-colors">{t('nav.help')}</a>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div className="flex items-center gap-3">
             <LanguageSwitcher variant="light" />
-            <Link href="/auth/login" style={{
-              padding: '8px 16px',
-              fontSize: '14px',
-              fontWeight: 700,
-              color: '#6b7280',
-              textDecoration: 'none',
-            }}>
-              {t('nav.login')}
-            </Link>
-            <Link href="/auth/register" style={{
-              padding: '14px 28px',
-              fontSize: '14px',
-              fontWeight: 900,
-              borderRadius: '12px',
-              color: '#ffffff',
-              backgroundColor: '#10b981',
-              textDecoration: 'none',
-              boxShadow: '0 8px 32px rgba(16,185,129,0.3)',
-            }}>
-              {t('nav.join')}
+            <Link
+              href="/download"
+              className="px-5 py-2.5 rounded-xl font-black text-sm text-[#0a0e1a] shadow-lg shadow-emerald-500/30 hover:scale-105 transition"
+              style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
+            >
+              {t('nav.download')}
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* ===== HERO SECTION ===== */}
-      <section style={{
-        position: 'relative',
-        width: '100%',
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: '160px',
-        paddingBottom: '80px',
-        paddingLeft: '24px',
-        paddingRight: '24px',
-        overflow: 'hidden',
-        background: 'linear-gradient(to bottom right, #eff6ff, #ffffff, #ecfdf5)',
-      }}>
-        <div style={{
-          width: '100%',
-          maxWidth: '1536px',
-          margin: '0 auto',
-          textAlign: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          padding: '0 40px',
-        }}>
-          {/* Beta badge */}
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            marginBottom: '32px',
-            padding: '8px 20px',
-            borderRadius: '9999px',
-            backgroundColor: '#ecfdf5',
-            border: '1px solid #a7f3d0',
-          }}>
-            <span style={{ position: 'relative', display: 'flex', height: '8px', width: '8px' }}>
-              <span style={{
-                position: 'absolute',
-                display: 'inline-flex',
-                height: '100%',
-                width: '100%',
-                borderRadius: '9999px',
-                backgroundColor: '#34d399',
-                opacity: 0.75,
-                animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite',
-              }} />
-              <span style={{
-                position: 'relative',
-                display: 'inline-flex',
-                borderRadius: '9999px',
-                height: '8px',
-                width: '8px',
-                backgroundColor: '#10b981',
-              }} />
+      {/* ═════════ HERO ═════════ */}
+      <section className="relative min-h-[90vh] flex flex-col items-center justify-center pt-40 pb-24 px-6 text-center">
+        <div className="max-w-5xl mx-auto flex flex-col items-center">
+          {/* Badge */}
+          <div
+            className="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-full border"
+            style={{
+              backgroundColor: 'rgba(16,185,129,0.08)',
+              borderColor: 'rgba(16,185,129,0.3)',
+            }}
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
             </span>
-            <span style={{
-              fontSize: '12px',
-              fontWeight: 900,
-              color: '#059669',
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-            }}>
+            <span className="text-xs font-black uppercase tracking-widest text-emerald-400">
               {t('hero.badge')}
             </span>
           </div>
 
           {/* Title */}
-          <h1 style={{
-            fontSize: '64px',
-            fontWeight: 900,
-            color: '#111827',
-            lineHeight: 0.95,
-            letterSpacing: '-0.03em',
-            marginBottom: '24px',
-            marginTop: 0,
-          }}>
+          <h1
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-[0.95] tracking-tighter mb-6"
+            style={{ color: '#f8fafc' }}
+          >
             {t('hero.title1')} <br />
-            <span style={{
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              color: 'transparent',
-              backgroundImage: 'linear-gradient(to right, #2563eb, #10b981)',
-            }}>
+            <span
+              style={{
+                backgroundImage: 'linear-gradient(135deg, #10b981 0%, #06b6d4 50%, #ec4899 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                color: 'transparent',
+              }}
+            >
               {t('hero.title2')}
             </span>
           </h1>
 
-          {/* Arabic subtitle */}
-          <p style={{
-            fontSize: '28px',
-            marginBottom: '40px',
-            fontWeight: 700,
-            color: 'rgba(16,185,129,0.5)',
-            fontStyle: 'italic',
-            fontFamily: "'Cairo', sans-serif",
-            marginTop: 0,
-          }}>
-            🃏 جوي الكارطة فابور
-          </p>
-
-          {/* Description */}
-          <p style={{
-            fontSize: '20px',
-            maxWidth: '640px',
-            color: '#64748b',
-            marginBottom: '56px',
-            lineHeight: 1.7,
-            fontWeight: 500,
-            marginTop: 0,
-          }}>
+          {/* Subtitle */}
+          <p className="text-lg sm:text-xl md:text-2xl max-w-3xl mb-12 leading-relaxed font-medium" style={{ color: '#94a3b8' }}>
             {t('hero.subtitle')}
           </p>
 
-          {/* CTA buttons */}
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '20px',
-            justifyContent: 'center',
-            marginBottom: '64px',
-          }}>
-            <Link href="/download" style={{
-              padding: '20px 40px',
-              borderRadius: '12px',
-              backgroundColor: '#10b981',
-              color: '#ffffff',
-              fontWeight: 900,
-              fontSize: '18px',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-              boxShadow: '0 16px 48px rgba(16,185,129,0.3)',
-            }}>
-              {t('hero.install')}
+          {/* CTA */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-16">
+            <Link
+              href="/download"
+              className="px-8 py-4 rounded-xl font-black text-base text-[#0a0e1a] shadow-2xl shadow-emerald-500/30 hover:scale-[1.03] active:scale-95 transition flex items-center gap-3"
+              style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
+            >
+              ⬇ {t('hero.install')}
             </Link>
-            <a href="#games" style={{
-              padding: '20px 40px',
-              borderRadius: '12px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #d1d5db',
-              color: '#374151',
-              fontWeight: 700,
-              fontSize: '18px',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-            }}>
-              {t('hero.explore')}
+            <a
+              href="#games"
+              className="px-8 py-4 rounded-xl font-bold text-base border backdrop-blur transition flex items-center gap-3"
+              style={{
+                backgroundColor: 'rgba(15,23,42,0.6)',
+                borderColor: 'rgba(255,255,255,0.1)',
+                color: '#e7e9ee',
+              }}
+            >
+              {t('hero.explore')} →
             </a>
           </div>
 
-          {/* Card Fan */}
-          <CardFan />
+          {/* Stats strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-3xl">
+            {[
+              { v: '10', l: t('stats.games') },
+              { v: '3', l: t('stats.languages') },
+              { v: '8', l: t('stats.bots') },
+              { v: '0€', l: t('stats.free') },
+            ].map((s) => (
+              <div
+                key={s.l}
+                className="p-5 rounded-2xl backdrop-blur-md border"
+                style={{
+                  backgroundColor: 'rgba(15,23,42,0.5)',
+                  borderColor: 'rgba(255,255,255,0.08)',
+                }}
+              >
+                <div
+                  className="text-3xl md:text-4xl font-black mb-1"
+                  style={{
+                    backgroundImage: 'linear-gradient(135deg, #10b981, #06b6d4)',
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    color: 'transparent',
+                  }}
+                >
+                  {s.v}
+                </div>
+                <div className="text-xs font-bold uppercase tracking-widest" style={{ color: '#94a3b8' }}>
+                  {s.l}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ===== STATS SECTION ===== */}
-      <ScrollReveal>
-        <section style={{
-          width: '100%',
-          padding: '48px 0',
-          background: 'linear-gradient(to right, #2563eb, #10b981)',
-        }}>
-          <div style={{
-            maxWidth: '1536px',
-            margin: '0 auto',
-            padding: '0 40px',
-          }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '16px',
-            }}>
-              {[{ v: '10+', l: t('stats.games') }, { v: '5', l: t('stats.languages') }, { v: '8', l: t('stats.bots') }, { v: '100%', l: t('stats.free') }].map((s, idx) => (
-                <div key={idx} style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                }}>
-                  <div style={{
-                    fontSize: '48px',
-                    fontWeight: 900,
-                    color: '#ffffff',
-                    marginBottom: '8px',
-                    letterSpacing: '-0.03em',
-                  }}>
-                    <AnimatedCounter target={s.v} />
-                  </div>
-                  <div style={{
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    color: 'rgba(255,255,255,0.8)',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.15em',
-                  }}>
-                    {s.l}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </ScrollReveal>
-
-      {/* ===== GAMES GRID SECTION ===== */}
-      <section id="games" style={{
-        width: '100%',
-        padding: '80px 0',
-        backgroundColor: '#ffffff',
-      }}>
-        <div style={{
-          maxWidth: '1536px',
-          margin: '0 auto',
-          padding: '0 40px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}>
+      {/* ═════════ GAMES GRID ═════════ */}
+      <section id="games" className="relative py-24 px-6">
+        <div className="max-w-7xl mx-auto">
           <ScrollReveal>
-            <div style={{ textAlign: 'center', marginBottom: '80px' }}>
-              <h2 style={{
-                fontSize: '40px',
-                fontWeight: 900,
-                color: '#111827',
-                marginBottom: '24px',
-                letterSpacing: '-0.03em',
-                marginTop: 0,
-              }}>
+            <div className="text-center mb-16">
+              <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ color: '#f8fafc' }}>
                 {t('games.title')}
               </h2>
-              <p style={{
-                fontSize: '18px',
-                color: '#6b7280',
-                fontWeight: 500,
-                maxWidth: '640px',
-                margin: '0 auto 24px auto',
-                lineHeight: 1.7,
-              }}>
+              <p className="text-base md:text-lg max-w-2xl mx-auto" style={{ color: '#94a3b8' }}>
                 {t('games.subtitle')}
               </p>
-              <div style={{
-                height: '6px',
-                width: '96px',
-                backgroundColor: '#10b981',
-                margin: '0 auto',
-                borderRadius: '9999px',
-              }} />
+              <div
+                className="h-1.5 w-24 mx-auto mt-6 rounded-full"
+                style={{ background: 'linear-gradient(90deg, #10b981, #06b6d4)' }}
+              />
             </div>
           </ScrollReveal>
 
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
-            gap: '24px',
-            width: '100%',
-          }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
             {GAMES.map((g, i) => (
-              <ScrollReveal key={g.name} delay={i * 60}>
-                <GameCard
-                  name={g.name}
-                  icon={g.icon}
-                  players={g.players}
-                  description={g.desc}
-                  color={g.color}
-                  deck={g.deck}
-                  sampleCard={g.sampleCards[0]}
-                  onClick={() => setSelectedGame(g)}
-                />
+              <ScrollReveal key={g.slug} delay={i * 50}>
+                <GameCardPremium game={g} lang={lang} t={t} />
               </ScrollReveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ===== FEATURES SECTION ===== */}
-      <section id="features" style={{
-        width: '100%',
-        padding: '80px 0',
-        backgroundColor: '#f8fafc',
-      }}>
-        <div style={{
-          maxWidth: '1536px',
-          margin: '0 auto',
-          padding: '0 40px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}>
+      {/* ═════════ FEATURES ═════════ */}
+      <section id="features" className="relative py-24 px-6">
+        <div className="max-w-7xl mx-auto">
           <ScrollReveal>
-            <div style={{ textAlign: 'center', marginBottom: '80px' }}>
-              <h2 style={{
-                fontSize: '40px',
-                fontWeight: 900,
-                color: '#111827',
-                marginBottom: '24px',
-                letterSpacing: '-0.03em',
-                marginTop: 0,
-              }}>
+            <div className="text-center mb-16">
+              <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ color: '#f8fafc' }}>
                 {t('features.title')}
               </h2>
-              <p style={{
-                fontSize: '18px',
-                color: '#6b7280',
-                fontWeight: 500,
-                maxWidth: '640px',
-                margin: '0 auto',
-                lineHeight: 1.7,
-              }}>
+              <p className="text-base md:text-lg max-w-2xl mx-auto" style={{ color: '#94a3b8' }}>
                 {t('features.subtitle')}
               </p>
             </div>
           </ScrollReveal>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '32px',
-            width: '100%',
-          }}>
-            {FEATURES.map((f, i) => (
-              <ScrollReveal key={f.title} delay={i * 80}>
-                <div style={{
-                  padding: '40px',
-                  borderRadius: '24px',
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #e5e7eb',
-                  boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textAlign: 'center',
-                  height: '100%',
-                }}>
-                  <div style={{
-                    width: '80px',
-                    height: '80px',
-                    borderRadius: '24px',
-                    backgroundColor: '#ecfdf5',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '36px',
-                    marginBottom: '32px',
-                  }}>
-                    {f.icon}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {FEATURES_KEYS.map((f, i) => (
+              <ScrollReveal key={f.titleKey} delay={i * 60}>
+                <div
+                  className="p-7 rounded-2xl backdrop-blur-md border h-full transition hover:-translate-y-1"
+                  style={{
+                    backgroundColor: 'rgba(15,23,42,0.5)',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                  }}
+                >
+                  <div
+                    className="w-14 h-14 rounded-xl flex items-center justify-center text-2xl mb-5"
+                    style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.15))', border: '1px solid rgba(16,185,129,0.3)' }}
+                  >
+                    {f.glyph}
                   </div>
-                  <h3 style={{
-                    fontSize: '24px',
-                    fontWeight: 900,
-                    color: '#111827',
-                    marginBottom: '16px',
-                    marginTop: 0,
-                  }}>
-                    {f.title}
-                  </h3>
-                  <p style={{
-                    color: '#6b7280',
-                    lineHeight: 1.7,
-                    fontWeight: 500,
-                    margin: 0,
-                  }}>
-                    {f.desc}
-                  </p>
+                  <h3 className="text-xl font-black mb-2" style={{ color: '#f8fafc' }}>{t(f.titleKey)}</h3>
+                  <p className="leading-relaxed" style={{ color: '#94a3b8' }}>{t(f.descKey)}</p>
                 </div>
               </ScrollReveal>
             ))}
@@ -535,472 +440,288 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ===== HOW TO PLAY SECTION ===== */}
-      <ScrollReveal>
-        <section id="how" style={{
-          width: '100%',
-          padding: '80px 0',
-          position: 'relative',
-          overflow: 'hidden',
-          background: 'linear-gradient(to bottom right, #059669, #2563eb)',
-        }}>
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: '384px',
-            height: '384px',
-            backgroundColor: '#ffffff',
-            borderRadius: '9999px',
-            filter: 'blur(120px)',
-            marginRight: '-192px',
-            marginTop: '-192px',
-            opacity: 0.1,
-          }} />
-
-          <div style={{
-            maxWidth: '1536px',
-            margin: '0 auto',
-            padding: '0 40px',
-            position: 'relative',
-            zIndex: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}>
-            <h2 style={{
-              fontSize: '40px',
-              fontWeight: 900,
-              color: '#ffffff',
-              marginBottom: '80px',
-              textAlign: 'center',
-              letterSpacing: '-0.03em',
-              marginTop: 0,
-            }}>
+      {/* ═════════ HOW IT WORKS ═════════ */}
+      <section id="how" className="relative py-24 px-6">
+        <div className="max-w-6xl mx-auto">
+          <ScrollReveal>
+            <h2 className="text-4xl md:text-5xl font-black mb-16 text-center tracking-tight" style={{ color: '#f8fafc' }}>
               {t('how.title')}
             </h2>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '64px',
-              width: '100%',
-            }}>
-              {[
-                { s: '01', icon: '📲', t: 'Installer', d: 'Telechargez SallyCards sur votre store prefere.' },
-                { s: '02', icon: '👤', t: 'Profil', d: 'Choisissez votre avatar et votre pseudo unique.' },
-                { s: '03', icon: '🎲', t: 'Lancer', d: 'Rejoignez une table publique ou privee.' },
-              ].map((step) => (
-                <div key={step.s} style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  textAlign: 'center',
-                  color: '#ffffff',
-                }}>
-                  <div style={{
-                    width: '96px',
-                    height: '96px',
-                    borderRadius: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '36px',
-                    marginBottom: '32px',
-                    border: '2px solid rgba(255,255,255,0.3)',
-                    transform: 'rotate(3deg)',
-                    backgroundColor: 'rgba(255,255,255,0.15)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
-                  }}>
-                    {step.icon}
+          </ScrollReveal>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { n: '01', tKey: 'how.step1', glyph: '⬇' },
+              { n: '02', tKey: 'how.step2', glyph: '⚙️' },
+              { n: '03', tKey: 'how.step3', glyph: '🎮' },
+            ].map((step, i) => (
+              <ScrollReveal key={step.n} delay={i * 100}>
+                <div
+                  className="p-7 rounded-2xl backdrop-blur-md border text-center h-full"
+                  style={{
+                    backgroundColor: 'rgba(15,23,42,0.5)',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                  }}
+                >
+                  <div
+                    className="w-20 h-20 mx-auto rounded-2xl flex items-center justify-center text-3xl mb-6"
+                    style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
+                  >
+                    {step.glyph}
                   </div>
-                  <h3 style={{
-                    fontSize: '24px',
-                    fontWeight: 900,
-                    marginBottom: '12px',
-                    marginTop: 0,
-                  }}>
-                    {step.t}
-                  </h3>
-                  <p style={{
-                    color: 'rgba(255,255,255,0.8)',
-                    lineHeight: 1.7,
-                    fontWeight: 500,
-                    margin: 0,
-                  }}>
-                    {step.d}
-                  </p>
+                  <div className="text-xs font-black uppercase tracking-widest mb-2" style={{ color: '#10b981' }}>
+                    {step.n}
+                  </div>
+                  <h3 className="text-xl font-black mb-3" style={{ color: '#f8fafc' }}>{t(`${step.tKey}.title`)}</h3>
+                  <p className="leading-relaxed" style={{ color: '#94a3b8' }}>{t(`${step.tKey}.desc`)}</p>
                 </div>
-              ))}
-            </div>
+              </ScrollReveal>
+            ))}
           </div>
-        </section>
-      </ScrollReveal>
+        </div>
+      </section>
 
-      {/* ===== TESTIMONIALS SECTION ===== */}
-      <ScrollReveal>
-        <section style={{
-          width: '100%',
-          padding: '80px 0',
-          backgroundColor: '#f8fafc',
-        }}>
-          <div style={{
-            maxWidth: '1536px',
-            margin: '0 auto',
-            padding: '0 40px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '80px' }}>
-              <h2 style={{
-                fontSize: '40px',
-                fontWeight: 900,
-                color: '#111827',
-                marginBottom: '24px',
-                letterSpacing: '-0.03em',
-                marginTop: 0,
-              }}>
-                {t('testimonials.title')}
-              </h2>
-              <p style={{
-                fontSize: '18px',
-                color: '#6b7280',
-                fontWeight: 500,
-                maxWidth: '640px',
-                margin: '0 auto',
-                lineHeight: 1.7,
-              }}>
-                Des joueurs passionnes partagent leur experience.
-              </p>
-            </div>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '32px',
-              width: '100%',
-            }}>
-              {[
-                { avatar: '👨‍💻', quote: "La meilleure app pour jouer a la Ronda avec mes amis, meme a distance. L'interface est super fluide !", name: 'Youssef M.', game: 'Joueur de Ronda' },
-                { avatar: '👩‍🎨', quote: "Enfin une application qui propose la Kdoub et la Belote dans la meme app. Je recommande a 100% !", name: 'Amina K.', game: 'Joueuse de Belote' },
-                { avatar: '🧑‍🔬', quote: "Les bots IA sont impressionnants. Je m'entraine chaque jour avant de jouer en ligne. Genial !", name: 'Rachid B.', game: 'Joueur de Poker' },
-              ].map((t, i) => (
-                <ScrollReveal key={i} delay={i * 100}>
-                  <div style={{
-                    padding: '32px',
-                    borderRadius: '24px',
-                    backgroundColor: '#ffffff',
-                    border: '1px solid #e5e7eb',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100%',
-                  }}>
-                    <div style={{ fontSize: '36px', marginBottom: '24px' }}>{t.avatar}</div>
-                    <p style={{
-                      color: '#6b7280',
-                      lineHeight: 1.7,
-                      fontWeight: 500,
-                      flex: 1,
-                      marginBottom: '24px',
-                      marginTop: 0,
-                    }}>
-                      &ldquo;{t.quote}&rdquo;
-                    </p>
-                    <div style={{ borderTop: '1px solid #f3f4f6', paddingTop: '16px' }}>
-                      <p style={{ fontWeight: 900, color: '#111827', margin: 0 }}>{t.name}</p>
-                      <p style={{ fontSize: '14px', color: '#10b981', fontWeight: 600, margin: '4px 0 0 0' }}>{t.game}</p>
-                    </div>
-                  </div>
-                </ScrollReveal>
-              ))}
-            </div>
-          </div>
-        </section>
-      </ScrollReveal>
-
-      {/* ===== FAQ SECTION ===== */}
-      <ScrollReveal>
-        <section style={{
-          width: '100%',
-          padding: '80px 0',
-          backgroundColor: '#ffffff',
-        }}>
-          <div style={{
-            maxWidth: '1280px',
-            margin: '0 auto',
-            padding: '0 40px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '80px' }}>
-              <h2 style={{
-                fontSize: '40px',
-                fontWeight: 900,
-                color: '#111827',
-                marginBottom: '24px',
-                letterSpacing: '-0.03em',
-                marginTop: 0,
-              }}>
+      {/* ═════════ FAQ ═════════ */}
+      <section className="relative py-24 px-6">
+        <div className="max-w-4xl mx-auto">
+          <ScrollReveal>
+            <div className="text-center mb-12">
+              <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ color: '#f8fafc' }}>
                 {t('faq.title')}
               </h2>
-              <p style={{
-                fontSize: '18px',
-                color: '#6b7280',
-                fontWeight: 500,
-                maxWidth: '640px',
-                margin: '0 auto',
-                lineHeight: 1.7,
-              }}>
-                {t('faq.subtitle')}
-              </p>
+              <p className="text-base md:text-lg" style={{ color: '#94a3b8' }}>{t('faq.subtitle')}</p>
             </div>
-            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {faqs.map((faq, i) => (
-                <div key={i} style={{
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '16px',
-                  overflow: 'hidden',
-                }}>
-                  <button
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+          </ScrollReveal>
+
+          <div className="flex flex-col gap-3">
+            {faqs.map((faq, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border overflow-hidden backdrop-blur-md"
+                style={{
+                  backgroundColor: 'rgba(15,23,42,0.5)',
+                  borderColor: 'rgba(255,255,255,0.08)',
+                }}
+              >
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  className="w-full p-6 flex items-center justify-between text-start hover:bg-white/5 transition"
+                >
+                  <span className="text-base md:text-lg font-bold pe-4" style={{ color: '#f8fafc' }}>
+                    {faq.q}
+                  </span>
+                  <span
+                    className="text-2xl flex-shrink-0 transition-transform duration-300"
                     style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '24px 32px',
-                      textAlign: 'left',
-                      backgroundColor: '#ffffff',
-                      border: 'none',
-                      cursor: 'pointer',
-                      outline: 'none',
+                      color: '#10b981',
+                      transform: openFaq === i ? 'rotate(45deg)' : 'rotate(0deg)',
                     }}
                   >
-                    <span style={{ fontSize: '18px', fontWeight: 700, color: '#111827' }}>{faq.q}</span>
-                    <span
-                      style={{
-                        fontSize: '24px',
-                        color: '#9ca3af',
-                        transition: 'transform 0.3s ease',
-                        flexShrink: 0,
-                        marginLeft: '16px',
-                        transform: openFaq === i ? 'rotate(45deg)' : 'rotate(0deg)',
-                      }}
-                    >
-                      +
-                    </span>
-                  </button>
-                  <div style={{
-                    overflow: 'hidden',
-                    transition: 'max-height 0.3s ease, opacity 0.3s ease',
-                    maxHeight: openFaq === i ? '200px' : '0px',
+                    +
+                  </span>
+                </button>
+                <div
+                  className="overflow-hidden transition-all duration-300"
+                  style={{
+                    maxHeight: openFaq === i ? '500px' : '0px',
                     opacity: openFaq === i ? 1 : 0,
-                  }}>
-                    <p style={{
-                      padding: '0 32px 24px 32px',
-                      color: '#6b7280',
-                      lineHeight: 1.7,
-                      fontWeight: 500,
-                      margin: 0,
-                    }}>
-                      {faq.a}
-                    </p>
-                  </div>
+                  }}
+                >
+                  <p className="px-6 pb-6 leading-relaxed" style={{ color: '#94a3b8' }}>{faq.a}</p>
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </ScrollReveal>
-
-      {/* ===== CTA FINAL SECTION ===== */}
-      <ScrollReveal>
-        <section style={{
-          width: '100%',
-          padding: '80px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: '#ffffff',
-        }}>
-          <div style={{
-            maxWidth: '1024px',
-            width: '100%',
-            padding: '80px',
-            borderRadius: '24px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #e5e7eb',
-            textAlign: 'center',
-            position: 'relative',
-            overflow: 'hidden',
-            boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
-          }}>
-            <h2 style={{
-              fontSize: '48px',
-              fontWeight: 900,
-              color: '#111827',
-              marginBottom: '32px',
-              position: 'relative',
-              zIndex: 10,
-              letterSpacing: '-0.03em',
-              marginTop: 0,
-            }}>
-              {t('cta.title')}
-            </h2>
-            <p style={{
-              color: '#6b7280',
-              marginBottom: '48px',
-              fontSize: '20px',
-              fontWeight: 500,
-              position: 'relative',
-              zIndex: 10,
-              lineHeight: 1.7,
-              marginTop: 0,
-            }}>
-              {t('cta.subtitle')}
-            </p>
-            <div style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              gap: '24px',
-              position: 'relative',
-              zIndex: 10,
-            }}>
-              <a href="#" style={{
-                backgroundColor: '#10b981',
-                color: '#ffffff',
-                padding: '20px 40px',
-                borderRadius: '12px',
-                fontWeight: 900,
-                fontSize: '18px',
-                textDecoration: 'none',
-                boxShadow: '0 16px 48px rgba(16,185,129,0.3)',
-              }}>
-                APP STORE
-              </a>
-              <a href="#" style={{
-                background: 'linear-gradient(to right, #2563eb, #3b82f6)',
-                color: '#ffffff',
-                padding: '20px 40px',
-                borderRadius: '12px',
-                fontWeight: 900,
-                fontSize: '18px',
-                textDecoration: 'none',
-                boxShadow: '0 16px 48px rgba(37,99,235,0.3)',
-              }}>
-                GOOGLE PLAY
-              </a>
-            </div>
-          </div>
-        </section>
-      </ScrollReveal>
-
-      {/* ===== FOOTER SECTION ===== */}
-      <footer style={{
-        width: '100%',
-        padding: '64px 0',
-        backgroundColor: '#111827',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-      }}>
-        <div style={{
-          maxWidth: '1536px',
-          margin: '0 auto',
-          padding: '0 40px',
-          width: '100%',
-        }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '64px',
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                marginBottom: '24px',
-                fontWeight: 900,
-                fontSize: '24px',
-                color: '#34d399',
-              }}>
-                <span style={{ fontSize: '30px' }}>🃏</span> SallyCards
-              </div>
-              <p style={{
-                color: '#9ca3af',
-                fontWeight: 500,
-                lineHeight: 1.7,
-                margin: 0,
-              }}>
-                {t('footer.desc')}
-              </p>
-              <p style={{
-                fontSize: '14px',
-                color: '#6b7280',
-                marginTop: '12px',
-                marginBottom: 0,
-              }}>
-                salistarcompany@gmail.com
-              </p>
-            </div>
-            {[
-              { title: 'Jeux', links: ['Ronda', 'Kdoub', 'Belote', 'Poker', 'Tarot'] },
-              { title: 'Plateforme', links: ['iOS', 'Android', 'API', 'Admin'] },
-              { title: 'Legal', links: ['Confidentialite', 'CGU', 'Contact'] },
-            ].map((col) => (
-              <div key={col.title} style={{ display: 'flex', flexDirection: 'column' }}>
-                <h4 style={{
-                  fontWeight: 900,
-                  color: '#ffffff',
-                  marginBottom: '32px',
-                  marginTop: 0,
-                  textTransform: 'uppercase',
-                  fontSize: '12px',
-                  letterSpacing: '0.3em',
-                }}>
-                  {col.title}
-                </h4>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {col.links.map((l) => (
-                    <li key={l}>
-                      <a href="#" style={{
-                        fontSize: '14px',
-                        fontWeight: 700,
-                        color: '#9ca3af',
-                        textDecoration: 'none',
-                      }}>
-                        {l}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
               </div>
             ))}
           </div>
-          <div style={{
-            marginTop: '96px',
-            paddingTop: '48px',
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            textAlign: 'center',
-            fontSize: '12px',
-            fontWeight: 900,
-            color: '#6b7280',
-            textTransform: 'uppercase',
-            letterSpacing: '0.15em',
-          }}>
-            &copy; 2026 SallyCards by SallyStar
+        </div>
+      </section>
+
+      {/* ═════════ CTA FINAL ═════════ */}
+      <section className="relative py-24 px-6">
+        <div
+          className="max-w-4xl mx-auto p-10 md:p-16 rounded-3xl text-center backdrop-blur-md border"
+          style={{
+            backgroundColor: 'rgba(15,23,42,0.5)',
+            borderColor: 'rgba(16,185,129,0.3)',
+            background:
+              'linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(6,182,212,0.1) 50%, rgba(236,72,153,0.05) 100%)',
+          }}
+        >
+          <h2 className="text-4xl md:text-5xl font-black mb-4 tracking-tight" style={{ color: '#f8fafc' }}>
+            {t('cta.title')}
+          </h2>
+          <p className="text-lg mb-8" style={{ color: '#94a3b8' }}>{t('cta.subtitle')}</p>
+          <Link
+            href="/download"
+            className="inline-flex items-center gap-3 px-8 py-4 rounded-xl font-black text-base text-[#0a0e1a] shadow-2xl shadow-emerald-500/30 hover:scale-[1.03] transition"
+            style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
+          >
+            ⬇ {t('nav.download')}
+          </Link>
+        </div>
+      </section>
+
+      {/* ═════════ FOOTER ═════════ */}
+      <footer
+        className="relative py-16 px-6 border-t"
+        style={{
+          backgroundColor: 'rgba(10,14,26,0.8)',
+          borderColor: 'rgba(255,255,255,0.06)',
+        }}
+      >
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+            <div className="col-span-2 md:col-span-1">
+              <div className="flex items-center gap-3 mb-4">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="3" />
+                    <path d="M12 8v8M8 12h8" />
+                  </svg>
+                </div>
+                <span className="text-xl font-black" style={{ color: '#f8fafc' }}>
+                  Sally<span style={{ color: '#10b981' }}>Cards</span>
+                </span>
+              </div>
+              <p className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
+                {t('footer.desc')}
+              </p>
+            </div>
+
+            <FooterColumn title={t('footer.games')} items={GAMES.slice(0, 5).map((g) => g.name)} />
+            <FooterColumn title={t('footer.platform')} items={['Android', 'iOS', t('footer.api'), t('footer.status')]} />
+            <FooterColumn title={t('footer.legal')} items={[t('footer.privacy'), t('footer.terms'), t('footer.contact')]} />
+          </div>
+          <div
+            className="pt-8 border-t text-center text-xs font-bold uppercase tracking-widest"
+            style={{
+              borderColor: 'rgba(255,255,255,0.06)',
+              color: '#64748b',
+            }}
+          >
+            © 2026 SallyCards · Made by SallyStar in Casablanca
           </div>
         </div>
       </footer>
-
-      {/* ===== GAME DETAIL MODAL ===== */}
-      <GameDetailModal game={selectedGame} onClose={() => setSelectedGame(null)} />
     </main>
+  );
+}
+
+// ─── Game card component (premium dark, two states) ───────────────────────
+function GameCardPremium({
+  game,
+  lang,
+  t,
+}: {
+  game: GameInfo;
+  lang: 'fr' | 'en' | 'ar';
+  t: (k: string) => string;
+}) {
+  const isAvailable = game.available;
+  return (
+    <div
+      className={`relative p-5 rounded-2xl backdrop-blur-md border transition-all duration-300 ${
+        isAvailable
+          ? 'hover:-translate-y-2 hover:shadow-2xl hover:shadow-emerald-500/20'
+          : 'opacity-75 hover:opacity-90'
+      } group`}
+      style={{
+        backgroundColor: isAvailable ? 'rgba(15,23,42,0.7)' : 'rgba(15,23,42,0.4)',
+        borderColor: isAvailable ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.06)',
+        boxShadow: isAvailable ? '0 4px 32px rgba(16,185,129,0.15)' : undefined,
+      }}
+    >
+      {/* State badge */}
+      <div
+        className="absolute top-3 end-3 px-2.5 py-1 rounded-full text-[10px] font-black tracking-widest uppercase"
+        style={{
+          backgroundColor: isAvailable ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
+          color: isAvailable ? '#10b981' : '#f59e0b',
+          border: `1px solid ${isAvailable ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)'}`,
+        }}
+      >
+        {isAvailable ? (
+          <>
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 me-1.5 animate-pulse" />
+            {t('games.available')}
+          </>
+        ) : (
+          t('games.comingSoon')
+        )}
+      </div>
+
+      {/* Icon */}
+      <div
+        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 mt-3 overflow-hidden"
+        style={{ background: game.gradient }}
+      >
+        {game.iconSrc ? (
+          <Image
+            src={game.iconSrc}
+            alt={game.name}
+            width={56}
+            height={56}
+            className="rounded-xl"
+            unoptimized
+          />
+        ) : (
+          <span className="text-3xl">{game.glyph}</span>
+        )}
+      </div>
+
+      <h3 className="text-lg font-black mb-1" style={{ color: '#f8fafc' }}>
+        {game.name}
+      </h3>
+      <p className="text-xs mb-3 font-mono" style={{ color: '#10b981' }}>
+        {game.players} {t('games.players')}
+      </p>
+      <p className="text-sm leading-relaxed mb-4 min-h-[3.5rem]" style={{ color: '#94a3b8' }}>
+        {game.desc[lang]}
+      </p>
+
+      {/* Button */}
+      {isAvailable ? (
+        <Link
+          href="/download"
+          className="block w-full text-center py-2.5 rounded-xl text-sm font-black text-[#0a0e1a] transition hover:scale-[1.02]"
+          style={{ background: 'linear-gradient(135deg, #10b981, #06b6d4)' }}
+        >
+          ⬇ {t('games.downloadNow')}
+        </Link>
+      ) : (
+        <button
+          disabled
+          className="block w-full text-center py-2.5 rounded-xl text-sm font-bold border cursor-not-allowed"
+          style={{
+            backgroundColor: 'rgba(255,255,255,0.03)',
+            borderColor: 'rgba(255,255,255,0.08)',
+            color: '#64748b',
+          }}
+        >
+          🔔 {t('games.notify')}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FooterColumn({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <h4 className="font-black uppercase text-xs tracking-widest mb-4" style={{ color: '#f8fafc' }}>
+        {title}
+      </h4>
+      <ul className="flex flex-col gap-2">
+        {items.map((i) => (
+          <li key={i}>
+            <a href="#" className="text-sm hover:text-white transition" style={{ color: '#94a3b8' }}>
+              {i}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

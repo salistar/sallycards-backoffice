@@ -3,10 +3,11 @@ import './globals.css';
 import RootLayoutClient from './layout-client';
 
 export const metadata: Metadata = {
-  title: 'SallyCards - جوي الكارطة',
-  description: 'SallyCards - 10 jeux de cartes MENA. Ronda, Kdoub, Belote, Poker et plus.',
+  title: 'SallyCards · 10 jeux de cartes MENA — Solitaire, Ronda, Belote',
+  description:
+    'Plateforme de jeux de cartes pour la région MENA. Solitaire disponible maintenant (Android APK). 9 autres jeux à venir : Ronda, Kdoub, Belote, Poker, Tarot, Scopa, Okey, Memory, Qui-est-ce. Trilingue FR/EN/AR.',
   manifest: '/manifest.json',
-  themeColor: '#0EA5E9',
+  themeColor: '#0a0e1a',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
