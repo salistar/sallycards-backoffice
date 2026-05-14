@@ -21,6 +21,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './components/LanguageSwitcher';
+import { GAMES } from './lib/games';
 
 // ───────────────────────────────────────────────────────────────────────
 // PALETTE (cf. brief)
@@ -673,7 +674,7 @@ export default function HomePage() {
                     }}
                   >
                     <Image
-                      src="/solitaire-icon.png"
+                      src="/games/solitaire.png"
                       alt="Sally Solitaire"
                       width={140}
                       height={140}
@@ -967,12 +968,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ════════════════════════ 4. SCREENSHOTS ════════════════════════ */}
+      {/* ═══════════════ 4a. NOS 11 JEUX (vraies icônes mobile) ═══════════════ */}
       <section
-        id="screenshots"
+        id="games"
         className="section"
         style={{
-          padding: '120px 80px 160px',
+          padding: '120px 80px',
           background: `linear-gradient(180deg, ${C.blueRoyal} 0%, ${C.bluePrimary} 100%)`,
           position: 'relative',
           overflow: 'visible',
@@ -982,68 +983,282 @@ export default function HomePage() {
           <Reveal>
             <div style={{ textAlign: 'center', maxWidth: '720px', margin: '0 auto 80px' }}>
               <h2 className="section-title" style={{ fontFamily: titleFont, fontSize: '56px', fontWeight: 900, color: C.white, margin: 0, lineHeight: 1.15 }}>
-                {t('screens.title')}
+                {lang === 'fr' ? 'Nos 11 jeux' : lang === 'en' ? 'Our 11 games' : 'ألعابنا الـ 11'}
               </h2>
               <p style={{ marginTop: '24px', fontSize: '18px', lineHeight: 1.7, color: 'rgba(248,250,252,0.85)' }}>
-                {t('screens.subtitle')}
+                {lang === 'fr'
+                  ? 'Une icône réelle, une page dédiée et un jeu par carte. Cliquez pour voir les règles et l\'état de disponibilité.'
+                  : lang === 'en'
+                  ? 'One real icon, one dedicated page, one game per card. Click for rules and availability state.'
+                  : 'أيقونة حقيقية، صفحة مخصصة، لعبة لكل بطاقة. انقر لرؤية القواعد وحالة التوفر.'}
               </p>
             </div>
           </Reveal>
 
           <div
-            className="phone-mockups"
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
               gap: '24px',
-              padding: '40px 0',
+              maxWidth: '1200px',
+              margin: '0 auto',
+              padding: '20px 0',
+            }}
+          >
+            {GAMES.map((g, i) => (
+              <Reveal key={g.slug} delay={i * 60}>
+                <Link
+                  href={`/download/${g.slug}`}
+                  style={{
+                    display: 'block',
+                    padding: '24px',
+                    background: g.available ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    border: `1px solid ${g.available ? 'rgba(16,185,129,0.45)' : 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: '20px',
+                    textDecoration: 'none',
+                    transition: 'all 0.3s',
+                    position: 'relative',
+                    overflow: 'visible',
+                    height: '100%',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = g.available
+                      ? '0 16px 40px rgba(16,185,129,0.3)'
+                      : '0 16px 40px rgba(10,21,53,0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-10px',
+                      insetInlineEnd: '20px',
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      letterSpacing: '0.14em',
+                      textTransform: 'uppercase',
+                      color: C.white,
+                      background: g.available
+                        ? `linear-gradient(135deg, ${C.green}, #059669)`
+                        : `linear-gradient(135deg, ${C.orange}, ${C.goldDark})`,
+                      boxShadow: g.available
+                        ? '0 4px 12px rgba(16,185,129,0.45)'
+                        : '0 4px 12px rgba(249,115,22,0.45)',
+                    }}
+                  >
+                    {g.available ? t('common.available') : t('common.soon')}
+                  </span>
+
+                  <div
+                    style={{
+                      width: '88px',
+                      height: '88px',
+                      borderRadius: '22px',
+                      overflow: 'hidden',
+                      marginBottom: '20px',
+                      boxShadow: '0 12px 28px rgba(10,21,53,0.4)',
+                      background: g.gradient,
+                      padding: '4px',
+                    }}
+                  >
+                    <Image
+                      src={g.iconSrc}
+                      alt={g.name}
+                      width={88}
+                      height={88}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '18px' }}
+                      unoptimized
+                    />
+                  </div>
+
+                  <h3
+                    style={{
+                      fontFamily: titleFont,
+                      fontSize: '20px',
+                      fontWeight: 700,
+                      color: C.white,
+                      margin: '0 0 6px',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {g.name}
+                  </h3>
+                  <p
+                    style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      color: C.gold,
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      margin: '0 0 12px',
+                    }}
+                  >
+                    {g.players} · {g.cardSystem === 'fr' ? '52 FR' : '40 ES'}
+                  </p>
+                  <p
+                    style={{
+                      fontSize: '13px',
+                      lineHeight: 1.55,
+                      color: 'rgba(248,250,252,0.78)',
+                      margin: 0,
+                    }}
+                  >
+                    {g.tagline[lang]}
+                  </p>
+                </Link>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ 4b. SCREENSHOTS — VRAIES CARTES FR + ES ═══════════════ */}
+      <section
+        id="screenshots"
+        className="section"
+        style={{
+          padding: '120px 80px 160px',
+          background: `linear-gradient(180deg, ${C.bluePrimary} 0%, ${C.blueLight} 100%)`,
+          position: 'relative',
+          overflow: 'visible',
+        }}
+      >
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <Reveal>
+            <div style={{ textAlign: 'center', maxWidth: '760px', margin: '0 auto 64px' }}>
+              <h2 className="section-title" style={{ fontFamily: titleFont, fontSize: '56px', fontWeight: 900, color: C.white, margin: 0, lineHeight: 1.15 }}>
+                {t('screens.title')}
+              </h2>
+              <p style={{ marginTop: '24px', fontSize: '18px', lineHeight: 1.7, color: 'rgba(248,250,252,0.92)' }}>
+                {lang === 'fr'
+                  ? "Les vraies cartes utilisées dans l'app : françaises 52 cartes (♠♥♦♣) et espagnoles 40 cartes (Bastos, Copas, Espadas, Oros)."
+                  : lang === 'en'
+                  ? 'The actual cards used in the app: French 52-card deck (♠♥♦♣) and Spanish 40-card deck (Bastos, Copas, Espadas, Oros).'
+                  : 'البطاقات الحقيقية المستخدمة في التطبيق: 52 ورقة فرنسية (♠♥♦♣) و 40 ورقة إسبانية (Bastos، Copas، Espadas، Oros).'}
+              </p>
+            </div>
+          </Reveal>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+              gap: '40px',
               maxWidth: '1100px',
               margin: '0 auto',
             }}
           >
-            {[
-              { label: 'Solitaire', bg: `linear-gradient(160deg, ${C.navyDeep}, ${C.bluePrimary})` },
-              { label: 'Daily',     bg: `linear-gradient(160deg, ${C.blueRoyal}, ${C.blueLight})` },
-              { label: 'Win',       bg: `linear-gradient(160deg, ${C.bluePrimary}, ${C.gold})` },
-              { label: 'Stats',     bg: `linear-gradient(160deg, ${C.blueLight}, ${C.bluePale})` },
-            ].map((s, i) => (
-              <Reveal key={i} delay={i * 100}>
-                <div
-                  style={{
-                    width: '100%',
-                    aspectRatio: '9/16',
-                    maxHeight: '500px',
-                    borderRadius: '32px',
-                    background: '#0A0A0A',
-                    padding: '8px',
-                    transform: `rotate(${i % 2 === 0 ? -2 : 2}deg)`,
-                    transition: 'transform 0.4s',
-                    boxShadow: '0 24px 60px rgba(10,21,53,0.6)',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'rotate(0deg) scale(1.05)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.transform = `rotate(${i % 2 === 0 ? -2 : 2}deg) scale(1)`)}
-                >
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: '26px',
-                      background: s.bg,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '16px',
-                      color: C.white,
-                    }}
-                  >
-                    <span style={{ fontSize: '64px', lineHeight: 1 }}>♠</span>
-                    <p style={{ fontFamily: titleFont, fontSize: '20px', fontWeight: 700, margin: 0 }}>{s.label}</p>
-                  </div>
+            {/* FR deck */}
+            <Reveal>
+              <div
+                style={{
+                  padding: '40px 32px',
+                  background: 'rgba(255,255,255,0.08)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: `1px solid ${C.gold}55`,
+                  borderRadius: '24px',
+                }}
+              >
+                <p style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.gold, margin: '0 0 8px' }}>
+                  ♠ {lang === 'fr' ? 'Jeu Français' : lang === 'en' ? 'French deck' : 'مجموعة فرنسية'}
+                </p>
+                <h3 style={{ fontFamily: titleFont, fontSize: '28px', fontWeight: 700, color: C.white, margin: '0 0 20px' }}>
+                  52 cartes · ♠ ♥ ♦ ♣
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px', paddingTop: '8px' }}>
+                  {['AS', 'KH', 'QD', 'JC', '0S', '0H'].map((card, i) => (
+                    <div
+                      key={card}
+                      style={{
+                        aspectRatio: '63 / 88',
+                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        background: C.white,
+                        boxShadow: '0 4px 12px rgba(10,21,53,0.35)',
+                        transform: `rotate(${(i - 2.5) * 4}deg)`,
+                      }}
+                    >
+                      <Image
+                        src={`/cards/fr/${card}.png`}
+                        alt={card}
+                        width={120}
+                        height={170}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        unoptimized
+                      />
+                    </div>
+                  ))}
                 </div>
-              </Reveal>
-            ))}
+                <p style={{ marginTop: '20px', fontSize: '13px', color: 'rgba(248,250,252,0.78)', lineHeight: 1.6 }}>
+                  {lang === 'fr'
+                    ? 'Utilisé pour Solitaire, Belote, Poker, Tarot, Kdoub, Concentration, Qui-est-ce et Kantcopy.'
+                    : lang === 'en'
+                    ? 'Used for Solitaire, Belote, Poker, Tarot, Kdoub, Concentration, Who-is-it and Kantcopy.'
+                    : 'يُستخدم في السوليتير، بلوت، بوكر، تاروت، كدوب، Concentration، Who-is-it و Kantcopy.'}
+                </p>
+              </div>
+            </Reveal>
+
+            {/* ES deck */}
+            <Reveal delay={200}>
+              <div
+                style={{
+                  padding: '40px 32px',
+                  background: 'rgba(255,255,255,0.08)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: `1px solid ${C.gold}55`,
+                  borderRadius: '24px',
+                }}
+              >
+                <p style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: C.gold, margin: '0 0 8px' }}>
+                  🪙 {lang === 'fr' ? 'Jeu Espagnol' : lang === 'en' ? 'Spanish deck' : 'مجموعة إسبانية'}
+                </p>
+                <h3 style={{ fontFamily: titleFont, fontSize: '28px', fontWeight: 700, color: C.white, margin: '0 0 20px' }}>
+                  40 cartes · Bastos / Copas / Espadas / Oros
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px', paddingTop: '8px' }}>
+                  {['1O', '12B', '11C', '10E', '7O', '3C'].map((card, i) => (
+                    <div
+                      key={card}
+                      style={{
+                        aspectRatio: '63 / 88',
+                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        background: C.white,
+                        boxShadow: '0 4px 12px rgba(10,21,53,0.35)',
+                        transform: `rotate(${(i - 2.5) * -4}deg)`,
+                      }}
+                    >
+                      <Image
+                        src={`/cards/es/${card}.png`}
+                        alt={card}
+                        width={120}
+                        height={170}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        unoptimized
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p style={{ marginTop: '20px', fontSize: '13px', color: 'rgba(248,250,252,0.78)', lineHeight: 1.6 }}>
+                  {lang === 'fr'
+                    ? 'Utilisé pour Ronda et Scopa — capture marocaine et italienne.'
+                    : lang === 'en'
+                    ? 'Used for Ronda and Scopa — Moroccan and Italian capture games.'
+                    : 'يُستخدم في الروندا والسكوبا — ألعاب الالتقاط المغربية والإيطالية.'}
+                </p>
+              </div>
+            </Reveal>
           </div>
         </div>
       </section>
