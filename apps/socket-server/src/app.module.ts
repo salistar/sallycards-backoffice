@@ -9,6 +9,7 @@ import { ChatGateway } from './gateways/chat.gateway';
 import { PresenceGateway } from './gateways/presence.gateway';
 import { RoomBridgeGateway } from './gateways/room-bridge.gateway';
 import { WebRtcGateway } from './gateways/webrtc.gateway';
+import { HkimFeedGateway } from './gateways/hkim-feed.gateway';
 
 @Module({
   imports: [
@@ -29,6 +30,6 @@ import { WebRtcGateway } from './gateways/webrtc.gateway';
       global: true,
     }),
   ],
-  providers: [GameGateway, LobbyGateway, ChatGateway, PresenceGateway, RoomBridgeGateway, WebRtcGateway],
+  providers: [GameGateway, LobbyGateway, ChatGateway, PresenceGateway, RoomBridgeGateway, WebRtcGateway, HkimFeedGateway],
 })
 export class AppModule {}
