@@ -164,7 +164,7 @@ export class User {
   role!: string;
 
   @ApiProperty()
-  @Prop({ default: 'ronda', enum: ['ronda', 'kdoub', 'belote', 'poker', 'tarot', 'scopa', 'okey', 'concentration', 'solitaire', 'quiestce'] })
+  @Prop({ default: 'ronda', enum: ['ronda', 'kdoub', 'belote', 'poker', 'tarot', 'scopa', 'okey', 'concentration', 'solitaire', 'quiestce', 'kantcopy'] })
   gameType!: string;
 
   @ApiProperty()

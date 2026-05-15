@@ -31,6 +31,11 @@ import { Achievement, AchievementSchema } from './schemas/achievement.schema';
         schema: UserSchema,
         collection: 'quiestce_users',
       },
+      {
+        name: 'KantcopyUser',
+        schema: UserSchema,
+        collection: 'kantcopy_users',
+      },
       { name: Achievement.name, schema: AchievementSchema },
     ]),
   ],

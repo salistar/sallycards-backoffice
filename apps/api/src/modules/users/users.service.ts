@@ -14,6 +14,7 @@ export const GAME_TYPES = [
   'concentration',
   'solitaire',
   'quiestce',
+  'kantcopy',
 ] as const;
 
 export type GameType = (typeof GAME_TYPES)[number];
@@ -44,6 +45,8 @@ export class UsersService {
     private readonly solitaireModel: Model<UserDocument>,
     @InjectModel('QuiestceUser')
     private readonly quiestceModel: Model<UserDocument>,
+    @InjectModel('KantcopyUser')
+    private readonly kantcopyModel: Model<UserDocument>,
   ) {
     this.modelMap = {
       ronda: this.rondaModel,
@@ -56,6 +59,7 @@ export class UsersService {
       concentration: this.concentrationModel,
       solitaire: this.solitaireModel,
       quiestce: this.quiestceModel,
+      kantcopy: this.kantcopyModel,
     };
   }
 
