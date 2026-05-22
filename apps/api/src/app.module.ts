@@ -28,6 +28,17 @@ import { ShopModule } from './modules/shop/shop.module';
 import { ChallengesModule } from './modules/challenges/challenges.module';
 import { InfraMonitoringModule } from './modules/infra-monitoring/infra-monitoring.module';
 import { HkimModule } from './modules/hkim/hkim.module';
+// --- Vision produit 2026 : modules ajoutes (sport challenges, classements
+// multi-periode, recompenses voucher, niveaux, friends, inbox push)
+import { ChallengesSportModule } from './modules/challenges-sport/challenges-sport.module';
+import { RankingsPeriodModule } from './modules/rankings-period/rankings-period.module';
+import { RewardsModule } from './modules/rewards/rewards.module';
+import { LevelsModule } from './modules/levels/levels.module';
+import { FriendsModule } from './modules/friends/friends.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { WeatherModule } from './modules/weather/weather.module';
+import { SupportModule } from './modules/support/support.module';
+import { ExternalInvitesModule } from './modules/external-invites/external-invites.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -105,6 +116,15 @@ import { AppController } from './app.controller';
     AdminModule,
     ShopModule,
     ChallengesModule,
+    ChallengesSportModule,
+    RankingsPeriodModule,
+    RewardsModule,
+    LevelsModule,
+    FriendsModule,
+    NotificationsModule,
+    WeatherModule,
+    SupportModule,
+    ExternalInvitesModule,
     InfraMonitoringModule,
     HkimModule,
   ],
