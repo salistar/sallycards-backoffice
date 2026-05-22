@@ -87,6 +87,28 @@ class ApiClient {
     }
   }
 
+  // ── Generic public helpers (Phase 2 data screens) ──────────────────
+  // Les écrans Belote (rewards, friends, tournaments, inbox, challenges)
+  // appellent directement le backend prod via ces helpers. La réponse est
+  // déjà déballée de l'enveloppe { success, data } par `request`.
+  async apiGet<T = any>(path: string): Promise<T> {
+    return this.request<T>(path);
+  }
+
+  async apiPost<T = any>(path: string, body?: any): Promise<T> {
+    return this.request<T>(path, {
+      method: 'POST',
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
+  }
+
+  async apiPatch<T = any>(path: string, body?: any): Promise<T> {
+    return this.request<T>(path, {
+      method: 'PATCH',
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
+  }
+
   // Auth endpoints
   async login(email: string, password: string): Promise<{
     accessToken: string;

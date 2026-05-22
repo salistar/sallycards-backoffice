@@ -31,16 +31,16 @@ interface MenuItem {
 }
 
 const MENU: MenuItem[] = [
+  { key: 'bot', label: 'vs Bot', sub: 'Partie complète contre l’IA', icon: Bot, grad: ['#10B981', '#059669'], href: '/belote/bot' },
   { key: 'create', label: 'Créer une room', sub: 'Partie multijoueur privée/publique', icon: Plus, grad: ['#7C3AED', '#EC4899'], phase: 3 },
   { key: 'join', label: 'Rejoindre', sub: 'Avec un code à 6 caractères', icon: Enter, grad: ['#2563EB', '#06B6D4'], phase: 3 },
-  { key: 'bot', label: 'vs Bot', sub: 'Joue contre l’IA', icon: Bot, grad: ['#10B981', '#059669'], phase: 2 },
   { key: 'rules', label: 'Règles', sub: 'Distribution, atouts, scoring', icon: BookOpen, grad: ['#0EA5E9', '#2563EB'], href: '/belote/rules' },
   { key: 'leaderboards', label: 'Classements', sub: 'Jour / semaine / mois / saison', icon: Medal, grad: ['#F59E0B', '#D97706'], href: '/leaderboard' },
-  { key: 'rewards', label: 'Récompenses', sub: 'Vouchers & niveaux', icon: Gift, grad: ['#EAB308', '#CA8A04'], phase: 2 },
-  { key: 'friends', label: 'Amis', sub: 'Liste & invitations', icon: Users, grad: ['#3B82F6', '#1D4ED8'], phase: 2 },
-  { key: 'tournaments', label: 'Tournois', sub: 'Daily / weekly', icon: Trophy, grad: ['#EAB308', '#B45309'], phase: 2 },
-  { key: 'inbox', label: 'Boîte', sub: 'Notifications', icon: Inbox, grad: ['#A855F7', '#7C3AED'], phase: 2 },
-  { key: 'challenges', label: 'Défis sport', sub: 'Marche / course A→B', icon: Activity, grad: ['#22C55E', '#16A34A'], phase: 2 },
+  { key: 'rewards', label: 'Récompenses', sub: 'Vouchers & niveaux', icon: Gift, grad: ['#EAB308', '#CA8A04'], href: '/belote/rewards' },
+  { key: 'friends', label: 'Amis', sub: 'Liste & invitations', icon: Users, grad: ['#3B82F6', '#1D4ED8'], href: '/belote/friends' },
+  { key: 'tournaments', label: 'Tournois', sub: 'Daily / weekly', icon: Trophy, grad: ['#EAB308', '#B45309'], href: '/belote/tournaments' },
+  { key: 'inbox', label: 'Boîte', sub: 'Notifications', icon: Inbox, grad: ['#A855F7', '#7C3AED'], href: '/belote/inbox' },
+  { key: 'challenges', label: 'Défis sport', sub: 'Marche / course A→B', icon: Activity, grad: ['#22C55E', '#16A34A'], href: '/belote/challenges' },
 ];
 
 export default function BeloteHub() {
