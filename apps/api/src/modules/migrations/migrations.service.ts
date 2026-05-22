@@ -119,6 +119,41 @@ export class MigrationsService implements OnModuleInit {
         );
       },
     },
+    {
+      id: '005-seed-demo-account',
+      description: 'Compte démo (demo@sallycards.com / Demo123456) dans toutes les collections *_users',
+      up: async (conn) => {
+        const bcrypt = require('bcrypt');
+        const passwordHash = await bcrypt.hash('Demo123456', 12);
+        const games = ['ronda', 'kdoub', 'belote', 'poker', 'tarot', 'scopa', 'okey', 'concentration', 'solitaire', 'quiestce', 'kantcopy'];
+        const now = new Date();
+        for (const gameType of games) {
+          await conn.collection(`${gameType}_users`).updateOne(
+            { email: 'demo@sallycards.com' },
+            {
+              $set: {
+                email: 'demo@sallycards.com',
+                username: 'Demo',
+                passwordHash,
+                avatar: '',
+                locale: 'fr',
+                gameType,
+                coins: 500,
+                stats: { gamesPlayed: 0, gamesWon: 0, elo: 1000, winStreak: 0, bestWinStreak: 0, totalPlayTimeMs: 0 },
+                settings: { theme: 'system', soundEnabled: true, hapticEnabled: true, language: 'fr', notificationsEnabled: true, autoMatchmaking: false, cardBackStyle: 'classic' },
+                role: 'player',
+                isGuest: false,
+                status: 'offline',
+                isVerified: true,
+                updatedAt: now,
+              },
+              $setOnInsert: { friends: [], friendRequests: [], blockedUsers: [], deviceTokens: [], createdAt: now },
+            },
+            { upsert: true },
+          );
+        }
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}
