@@ -32,8 +32,8 @@ interface MenuItem {
 
 const MENU: MenuItem[] = [
   { key: 'bot', label: 'vs Bot', sub: 'Partie complète contre l’IA', icon: Bot, grad: ['#10B981', '#059669'], href: '/belote/bot' },
-  { key: 'create', label: 'Créer une room', sub: 'Partie multijoueur privée/publique', icon: Plus, grad: ['#7C3AED', '#EC4899'], phase: 3 },
-  { key: 'join', label: 'Rejoindre', sub: 'Avec un code à 6 caractères', icon: Enter, grad: ['#2563EB', '#06B6D4'], phase: 3 },
+  { key: 'create', label: 'Créer une room', sub: 'Multijoueur temps réel web ↔ mobile', icon: Plus, grad: ['#7C3AED', '#EC4899'], href: '/belote/room' },
+  { key: 'join', label: 'Rejoindre', sub: 'Avec un code à 6 caractères', icon: Enter, grad: ['#2563EB', '#06B6D4'], href: '/belote/room' },
   { key: 'rules', label: 'Règles', sub: 'Distribution, atouts, scoring', icon: BookOpen, grad: ['#0EA5E9', '#2563EB'], href: '/belote/rules' },
   { key: 'leaderboards', label: 'Classements', sub: 'Top joueurs Belote par ELO', icon: Medal, grad: ['#F59E0B', '#D97706'], href: '/belote/leaderboard' },
   { key: 'rewards', label: 'Récompenses', sub: 'Vouchers & niveaux', icon: Gift, grad: ['#EAB308', '#CA8A04'], href: '/belote/rewards' },
