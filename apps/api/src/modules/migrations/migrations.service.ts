@@ -158,8 +158,10 @@ export class MigrationsService implements OnModuleInit {
         this.logger.log(`  ✓ ${m.id} (${dt}ms) — ${m.description}`);
         applied.push(m.id);
       } catch (err: any) {
-        this.logger.error(`  ✗ ${m.id} FAILED: ${err?.message ?? err}`);
-        throw err;
+        // Résilient : on logge et on CONTINUE — une migration en échec (ex.
+        // conflit d'index préexistant) ne doit pas bloquer les suivantes.
+        // Elle restera "pending" et sera retentée au prochain boot.
+        this.logger.error(`  ✗ ${m.id} FAILED (skip): ${err?.message ?? err}`);
       }
     }
     return { applied };
