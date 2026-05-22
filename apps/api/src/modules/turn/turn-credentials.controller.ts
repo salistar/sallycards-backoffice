@@ -72,15 +72,14 @@ export class TurnCredentialsController {
     hmac.update(username);
     const credential = hmac.digest('base64');
 
-    const turnHost = process.env.TURN_HOST ?? 'turn.salistar.ma';
+    const turnHost = process.env.TURN_HOST ?? 'turn.salistar.com';
     const turnPort = process.env.TURN_PORT ?? '3478';
     const turnTlsPort = process.env.TURN_TLS_PORT ?? '5349';
 
     const response: TurnCredentialsResponse = {
       iceServers: [
-        // STUN public Google (fallback gratuit, latence variable mais 99% uptime).
-        { urls: 'stun:stun.l.google.com:19302' },
-        // STUN/TURN SALISTAR auto-hébergé (Hetzner, sous notre contrôle).
+        // UNIQUEMENT STUN/TURN SALISTAR auto-hébergé (coturn Hetzner, sous notre
+        // contrôle). Pas de STUN/TURN tiers (ni Google, ni Jitsi).
         {
           urls: [
             `stun:${turnHost}:${turnPort}`,
