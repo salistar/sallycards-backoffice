@@ -26,9 +26,21 @@ async function bootstrap() {
   // Security
   app.use(helmet());
 
-  // CORS
+  // CORS — origines autorisées = CORS_ORIGINS (env) + domaines prod salistar.com
+  // en dur (le web prod marche quel que soit le .env.production du VPS).
+  const envOrigins = configService
+    .get<string>('CORS_ORIGINS', 'http://localhost:4000,http://localhost:8081')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const prodOrigins = [
+    'https://sallycards.salistar.com',
+    'https://salistar.com',
+    'https://www.salistar.com',
+    'https://backoffice.salistar.com',
+  ];
   app.enableCors({
-    origin: configService.get<string>('CORS_ORIGINS', 'http://localhost:4000,http://localhost:8081').split(','),
+    origin: Array.from(new Set([...envOrigins, ...prodOrigins])),
     credentials: true,
   });
 
