@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../lib/auth-context';
-import { Eye, EyeOff, Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
+import { GAMES } from '../../lib/games';
+import { Eye, EyeOff, Mail, Lock, Loader2, ArrowRight, Gamepad2, Shield, User as UserIcon } from 'lucide-react';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -39,11 +41,16 @@ const iconStyle: React.CSSProperties = {
 export default function LoginPage() {
   const { t } = useTranslation();
   const { login } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Choix type de jeu (depuis ?game= ou défaut belote) + rôle
+  const [gameType, setGameType] = useState<string>(searchParams?.get('game') || 'belote');
+  const [role, setRole] = useState<'player' | 'admin'>('player');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,7 +61,14 @@ export default function LoginPage() {
     }
     setLoading(true);
     try {
+      // Mémorise le contexte (le rôle réel reste validé côté serveur)
+      try {
+        localStorage.setItem('sally_gameType', gameType);
+        localStorage.setItem('sally_role', role);
+      } catch {}
       await login(email, password);
+      // Redirection : admin → console admin, sinon → le jeu choisi
+      router.push(role === 'admin' ? '/admin' : `/${gameType}`);
     } catch (err: any) {
       setError(err.message || 'Identifiants incorrects.');
     } finally {
@@ -112,6 +126,47 @@ export default function LoginPage() {
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
+        {/* Type de jeu */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
+            <Gamepad2 style={{ width: '1rem', height: '1rem', color: '#10b981' }} /> Type de jeu
+          </label>
+          <select
+            value={gameType}
+            onChange={(e) => setGameType(e.target.value)}
+            style={{ ...inputStyle, paddingLeft: '1rem', appearance: 'auto' as any }}
+          >
+            {GAMES.map((g) => (
+              <option key={g.slug} value={g.slug}>{g.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Rôle */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
+            Rôle
+          </label>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            {([['player', 'Joueur', UserIcon], ['admin', 'Administrateur', Shield]] as const).map(([val, label, Icon]) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setRole(val)}
+                style={{
+                  flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
+                  padding: '0.85rem', borderRadius: '0.75rem', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem',
+                  border: `2px solid ${role === val ? '#10b981' : '#e5e7eb'}`,
+                  backgroundColor: role === val ? '#ecfdf5' : '#ffffff',
+                  color: role === val ? '#047857' : '#6b7280',
+                }}
+              >
+                <Icon style={{ width: '1.1rem', height: '1.1rem' }} /> {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Email */}
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
