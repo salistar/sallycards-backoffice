@@ -25,6 +25,13 @@ COPY tsconfig.base.json nx.json ./
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# URLs publiques bakées au build (NEXT_PUBLIC_* doit être présent à `next build`).
+# Sans ça, le client tombe sur localhost:3000 → "Impossible de contacter le serveur".
+ARG NEXT_PUBLIC_API_URL=https://api.salistar.com/api/v1
+ARG NEXT_PUBLIC_SOCKET_URL=https://ws.salistar.com
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
+
 RUN cd apps/web && npx next build
 
 # ---- Runner ----
