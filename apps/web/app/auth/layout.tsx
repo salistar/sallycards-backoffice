@@ -45,7 +45,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </h2>
 
           <p className="text-xl leading-relaxed max-w-md mb-16" style={{ color: '#93C5FD' }}>
-            Ronda, Kdoub, Belote et 7 autres jeux de cartes traditionnels. Jouez en ligne ou hors-ligne.
+            Ronda, Kdoub, Belote et 8 autres jeux de cartes traditionnels. Jouez en ligne ou hors-ligne.
           </p>
 
           {/* Stats */}
