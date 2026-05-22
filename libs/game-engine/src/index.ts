@@ -3,6 +3,17 @@ export type { ValidationResult, GameEvent } from './lib/game-engine.base';
 export { DeckManager } from './lib/deck-manager';
 export { TurnManager } from './lib/turn-manager';
 
+// Bot difficulty presets (shared across all card-game apps)
+export {
+  BOT_PRESETS,
+  parseDifficulty,
+  thinkDelay,
+  shouldRandomize,
+  difficultyBadge,
+  difficultyColor,
+} from './lib/bot-difficulty';
+export type { BotDifficulty, BotConfig } from './lib/bot-difficulty';
+
 // Solitaire
 export { SolitaireEngine } from './lib/games/solitaire/solitaire.engine';
 export type {

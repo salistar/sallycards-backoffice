@@ -153,6 +153,25 @@ export class TournamentsService {
     return t.toObject();
   }
 
+  /** Inscrit un joueur à un tournoi (entry sans score initial). Idempotent. */
+  async join(code: string, userId: string, displayName: string): Promise<Tournament> {
+    const t = await this.tournamentModel.findOne({ code }).exec();
+    if (!t) throw new NotFoundException(`Tournament ${code} introuvable`);
+    if (t.status === 'closed') throw new BadRequestException('Tournoi terminé');
+    const already = t.entries.find((e) => e.userId === userId);
+    if (!already) {
+      t.entries.push({
+        userId, displayName,
+        bestScore: 0, bestMoves: 0, bestDurationMs: 0,
+        attempts: 0, joinedAt: Date.now(),
+      });
+      t.markModified('entries');
+      await t.save();
+      this.logger.log(`➕ ${displayName} a rejoint le tournoi ${code}`);
+    }
+    return t.toObject();
+  }
+
   /** Liste les tournois actifs (status open ou running, endsAt > now). */
   async listActive(): Promise<Tournament[]> {
     const now = Date.now();

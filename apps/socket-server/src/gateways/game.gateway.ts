@@ -180,6 +180,56 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  // ── game:annonce (Belote-specific : Tierce/Cinquante/Cent/Carrés) ─────────
+  // Permet à un joueur de déclarer ses annonces ; le serveur broadcast
+  // l'event aux autres joueurs sans valider (scoring est calculé côté
+  // client). Pas de persistance — fire-and-forget.
+  @SubscribeMessage('game:annonce')
+  handleAnnonce(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: {
+      roomId: string;
+      annonces: Array<{ type: string; points: number; cards?: Array<{ id: string }> }>;
+    },
+  ) {
+    try {
+      const { roomId, annonces } = payload;
+      if (!roomId || !Array.isArray(annonces)) return;
+      this.logger.log(
+        `game:annonce in ${roomId} by ${client.userId} (${annonces.length} annonce(s))`,
+      );
+      this.server.to(roomId).emit('game:annonce:declared' as any, {
+        playerId: client.userId,
+        annonces,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Error in game:annonce: ${err instanceof Error ? err.message : 'unknown error'}`,
+      );
+    }
+  }
+
+  // ── game:belote (Belote-Rebelote : R+D atout posés successivement) ────────
+  @SubscribeMessage('game:belote')
+  handleBelote(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { roomId: string; type: 'belote' | 'rebelote' },
+  ) {
+    try {
+      const { roomId, type } = payload;
+      if (!roomId || (type !== 'belote' && type !== 'rebelote')) return;
+      this.logger.log(`game:belote (${type}) in ${roomId} by ${client.userId}`);
+      this.server.to(roomId).emit('game:belote:declared' as any, {
+        playerId: client.userId,
+        type,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Error in game:belote: ${err instanceof Error ? err.message : 'unknown error'}`,
+      );
+    }
+  }
+
   /**
    * Schedule cleanup of a finished game after a timeout.
    * Prevents memory leaks from accumulated game states.

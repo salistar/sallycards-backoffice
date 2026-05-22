@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { TournamentsService } from './tournaments.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Tournaments')
 @Controller('tournaments')
@@ -11,6 +12,33 @@ export class TournamentsController {
   @ApiOperation({ summary: 'Liste des tournois ouverts/en cours' })
   async listActive() {
     return { success: true, data: await this.service.listActive() };
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Liste des tournois actifs (format mobile/friendly)' })
+  async list(@Query('gameType') gameType?: string) {
+    const items = await this.service.listActive();
+    return items
+      .filter((t: any) => !gameType || t.variant === gameType)
+      .map((t: any) => ({
+        _id: t.code,
+        name: `Tournoi ${t.type}`,
+        scope: t.type,
+        status: t.status === 'closed' ? 'finished' : t.status,
+        participantsCount: t.entries?.length ?? 0,
+        maxParticipants: 100,
+        startsAt: new Date(t.startsAt).toISOString(),
+        prizes: (t.prizes ?? []).map((p: any) => ({ rank: p.rank, reward: `${p.gold} gold` })),
+      }));
+  }
+
+  @Post(':code/join')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Inscrit le joueur courant à un tournoi' })
+  async join(@Param('code') code: string, @Req() req: any, @Body() body: any) {
+    const displayName = body?.displayName || req.user?.username || 'Joueur';
+    return this.service.join(code, req.user.userId, displayName);
   }
 
   @Get('daily/:variant')

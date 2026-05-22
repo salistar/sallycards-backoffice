@@ -17,6 +17,55 @@ export class ShopService {
     return packages;
   }
 
+  /** Catalogue d'items cosmétiques (avatars, thèmes, decks, premium, boosts). */
+  async listItems(category?: string) {
+    const filter: Record<string, any> = { active: { $ne: false } };
+    if (category) filter.category = category;
+    return this.conn.collection('shop_items').find(filter).sort({ sortOrder: 1 }).toArray();
+  }
+
+  /** Détail d'un item par id. */
+  async getItem(id: string) {
+    const { ObjectId } = require('mongodb');
+    const oid = (() => { try { return new ObjectId(id); } catch { return id; } })();
+    const item = await this.conn.collection('shop_items').findOne({ _id: oid });
+    if (!item) throw new NotFoundException(`Item ${id} introuvable`);
+    return item;
+  }
+
+  /** Historique d'achats d'un utilisateur. */
+  async listPurchases(userId: string) {
+    const { ObjectId } = require('mongodb');
+    const oid = (() => { try { return new ObjectId(userId); } catch { return userId; } })();
+    return this.conn
+      .collection('purchases')
+      .find({ userId: oid })
+      .sort({ purchasedAt: -1 })
+      .toArray();
+  }
+
+  /**
+   * Enregistre une intention d'achat (status 'pending'). Le paiement réel
+   * passe par le store natif ; la validation finale arrive via le webhook
+   * RevenueCat. On trace l'intention pour le suivi et l'historique.
+   */
+  async createPurchaseIntent(userId: string, itemId: string, name: string, priceEur: number) {
+    const { ObjectId } = require('mongodb');
+    const oid = (() => { try { return new ObjectId(userId); } catch { return userId; } })();
+    const doc = {
+      userId: oid,
+      itemId: itemId ?? null,
+      name: name ?? 'Article',
+      priceEur: Number(priceEur) || 0,
+      status: 'pending' as const,
+      purchasedAt: new Date(),
+      createdAt: new Date(),
+    };
+    const res = await this.conn.collection('purchases').insertOne(doc);
+    this.logger.log(`🛒 purchase-intent ${name} (${priceEur}€) → ${userId}`);
+    return { id: res.insertedId, ...doc };
+  }
+
   /**
    * Credit a user's coins — called by the RevenueCat webhook OR by the client
    * optimistic path after a successful purchase. All mutations are logged in

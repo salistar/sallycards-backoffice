@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Request, UseGuards, Headers, UnauthorizedException } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Request, UseGuards, Headers, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { ShopService } from './shop.service';
@@ -16,6 +16,34 @@ export class ShopController {
   @ApiOperation({ summary: 'List all active coin packages' })
   async listPackages() {
     return this.shop.listPackages();
+  }
+
+  @Get('items')
+  @ApiOperation({ summary: 'Catalogue items cosmétiques (avatars/thèmes/decks/...)' })
+  async listItems(@Query('category') category?: string) {
+    return this.shop.listItems(category);
+  }
+
+  @Get('items/:id')
+  @ApiOperation({ summary: 'Détail d\'un item' })
+  async getItem(@Param('id') id: string) {
+    return this.shop.getItem(id);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('purchases')
+  @ApiOperation({ summary: 'Historique des achats de l\'utilisateur' })
+  async listPurchases(@Request() req: any) {
+    return this.shop.listPurchases(req.user.userId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('purchase-intent')
+  @ApiOperation({ summary: 'Enregistre une intention d\'achat (pending)' })
+  async purchaseIntent(@Request() req: any, @Body() body: any) {
+    return this.shop.createPurchaseIntent(req.user.userId, body?.itemId, body?.name, body?.priceEur);
   }
 
   @ApiBearerAuth()
