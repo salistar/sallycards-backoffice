@@ -66,6 +66,59 @@ export class MigrationsService implements OnModuleInit {
         );
       },
     },
+    {
+      id: '004-seed-belote-content',
+      description: 'Seed boutique (items + coin packs) + tournoi belote pour les écrans Belote',
+      up: async (conn) => {
+        const now = Date.now();
+        // ── shop_items (catalogue cosmétique) ──
+        const items = [
+          { name: 'Avatar Joker', category: 'avatar', description: 'Un avatar joker exclusif, animé.', priceEur: 1.99, priceCoins: 500, active: true, sortOrder: 1 },
+          { name: 'Avatar Reine de Pique', category: 'avatar', description: 'Portrait stylisé de la Reine de Pique.', priceEur: 1.99, priceCoins: 500, active: true, sortOrder: 2 },
+          { name: 'Thème Bois Royal', category: 'theme', description: 'Tapis de jeu en bois sombre verni.', priceEur: 2.99, priceCoins: 800, active: true, sortOrder: 3 },
+          { name: 'Thème Néon', category: 'theme', description: 'Table néon cyberpunk pour les parties nocturnes.', priceEur: 2.99, priceCoins: 800, active: true, sortOrder: 4 },
+          { name: 'Deck Français Classique', category: 'deck', description: 'Cartes françaises traditionnelles HD.', priceEur: 2.99, priceCoins: 800, active: true, sortOrder: 5 },
+          { name: 'Deck Marocain', category: 'deck', description: 'Cartes aux motifs zellige marocains.', priceEur: 2.99, priceCoins: 800, active: true, sortOrder: 6 },
+          { name: 'Sally Plus (mensuel)', category: 'premium', description: 'Sans pub, défis illimités, avatars exclusifs.', priceEur: 4.99, active: true, sortOrder: 7 },
+          { name: 'Boost XP x2 (24h)', category: 'boost', description: 'Double ton XP pendant 24 heures.', priceEur: 1.99, priceCoins: 600, active: true, sortOrder: 8 },
+        ];
+        for (const it of items) {
+          await conn.collection('shop_items').updateOne(
+            { name: it.name },
+            { $set: { ...it, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },
+            { upsert: true },
+          );
+        }
+        // ── shop_packages (coin packs) si absents ──
+        const packs = [
+          { productId: 'coins_100', coins: 100, priceEur: 0.99, label: '100 pièces', active: true, sortOrder: 1 },
+          { productId: 'coins_500', coins: 500, priceEur: 4.99, label: '500 pièces', active: true, sortOrder: 2, bonus: 50 },
+          { productId: 'coins_2000', coins: 2000, priceEur: 19.99, label: '2000 pièces', active: true, sortOrder: 3, bonus: 400 },
+          { productId: 'coins_10000', coins: 10000, priceEur: 49.99, label: '10000 pièces', active: true, sortOrder: 4, bonus: 3000 },
+        ];
+        for (const pk of packs) {
+          await conn.collection('shop_packages').updateOne(
+            { productId: pk.productId },
+            { $set: { ...pk, updatedAt: new Date() }, $setOnInsert: { createdAt: new Date() } },
+            { upsert: true },
+          );
+        }
+        // ── 1 tournoi belote ouvert (fenêtre 30j, pour les écrans Tournois) ──
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-belote-open' },
+          {
+            $set: {
+              code: 'SEED-belote-open', type: 'daily', variant: 'belote', difficulty: 'medium',
+              status: 'open', startsAt: now, endsAt: now + 30 * 24 * 3600 * 1000,
+              prizes: [{ rank: 1, gold: 500 }, { rank: 2, gold: 250 }, { rank: 3, gold: 100 }],
+              updatedAt: new Date(),
+            },
+            $setOnInsert: { entries: [], createdAt: new Date() },
+          },
+          { upsert: true },
+        );
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}
