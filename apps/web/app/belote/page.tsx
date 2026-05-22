@@ -35,7 +35,7 @@ const MENU: MenuItem[] = [
   { key: 'create', label: 'Créer une room', sub: 'Partie multijoueur privée/publique', icon: Plus, grad: ['#7C3AED', '#EC4899'], phase: 3 },
   { key: 'join', label: 'Rejoindre', sub: 'Avec un code à 6 caractères', icon: Enter, grad: ['#2563EB', '#06B6D4'], phase: 3 },
   { key: 'rules', label: 'Règles', sub: 'Distribution, atouts, scoring', icon: BookOpen, grad: ['#0EA5E9', '#2563EB'], href: '/belote/rules' },
-  { key: 'leaderboards', label: 'Classements', sub: 'Jour / semaine / mois / saison', icon: Medal, grad: ['#F59E0B', '#D97706'], href: '/leaderboard' },
+  { key: 'leaderboards', label: 'Classements', sub: 'Top joueurs Belote par ELO', icon: Medal, grad: ['#F59E0B', '#D97706'], href: '/belote/leaderboard' },
   { key: 'rewards', label: 'Récompenses', sub: 'Vouchers & niveaux', icon: Gift, grad: ['#EAB308', '#CA8A04'], href: '/belote/rewards' },
   { key: 'friends', label: 'Amis', sub: 'Liste & invitations', icon: Users, grad: ['#3B82F6', '#1D4ED8'], href: '/belote/friends' },
   { key: 'tournaments', label: 'Tournois', sub: 'Daily / weekly', icon: Trophy, grad: ['#EAB308', '#B45309'], href: '/belote/tournaments' },
