@@ -48,6 +48,28 @@ export class ShopController {
 
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
+  @Get('vip/status')
+  @ApiOperation({ summary: 'Statut VIP de l\'utilisateur (isVip, vipUntil)' })
+  async vipStatus(@Request() req: any, @Query('gameType') gameType = 'belote') {
+    return this.shop.getVipStatus(gameType, req.user.userId);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('vip/confirm')
+  @ApiOperation({ summary: 'Confirme un achat VIP (RevenueCat client SDK)' })
+  async vipConfirm(@Request() req: any, @Body() body: any) {
+    return this.shop.confirmPurchase(
+      body?.gameType || 'belote',
+      req.user.userId,
+      body?.productId || 'sally_plus_monthly',
+      body?.purchaseId,
+      body?.platform ?? 'android',
+    );
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @Post('purchase/confirm')
   @ApiOperation({ summary: 'Confirm a purchase from the RevenueCat client SDK' })
   async confirmPurchase(@Request() req: any, @Body() body: any) {

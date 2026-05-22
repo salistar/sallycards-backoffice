@@ -107,6 +107,56 @@ export class ShopService {
     return pkg;
   }
 
+  // ── VIP Pass (abonnement RevenueCat) ───────────────────────────────────
+  /** Produits VIP → durée en mois. Mappés aux product IDs RevenueCat. */
+  private readonly VIP_PRODUCTS: Record<string, number> = {
+    sally_plus_monthly: 1,
+    sally_plus_yearly: 12,
+  };
+
+  private oid(userId: string) {
+    const { ObjectId } = require('mongodb');
+    try { return new ObjectId(userId); } catch { return userId; }
+  }
+
+  /** Accorde / prolonge le statut VIP (cumulatif si encore actif). */
+  async grantVip(gameType: string, userId: string, months: number, meta: Record<string, any> = {}) {
+    const collection = `${gameType}_users`;
+    const oid = this.oid(userId);
+    const user = await this.conn.collection(collection).findOne({ _id: oid }, { projection: { vipUntil: 1 } });
+    const now = new Date();
+    const base = user?.vipUntil && new Date(user.vipUntil) > now ? new Date(user.vipUntil) : now;
+    const vipUntil = new Date(base.getTime() + months * 30 * 24 * 3600 * 1000);
+    await this.conn.collection(collection).updateOne(
+      { _id: oid },
+      { $set: { vipUntil, isVip: true, updatedAt: new Date() } },
+    );
+    await this.conn.collection('coin_transactions').insertOne({
+      userId: oid, gameType, amount: 0, type: 'vip', source: 'vip_purchase',
+      meta: { ...meta, months }, createdAt: new Date(),
+    });
+    this.logger.log(`👑 VIP accordé ${months} mois → ${userId} (jusqu'à ${vipUntil.toISOString()})`);
+    return { isVip: true, vipUntil };
+  }
+
+  /** Statut VIP courant. */
+  async getVipStatus(gameType: string, userId: string) {
+    const user = await this.conn.collection(`${gameType}_users`).findOne(
+      { _id: this.oid(userId) }, { projection: { vipUntil: 1 } },
+    );
+    const vipUntil = user?.vipUntil ? new Date(user.vipUntil) : null;
+    return { isVip: !!vipUntil && vipUntil > new Date(), vipUntil };
+  }
+
+  /** Révoque le VIP (expiration / annulation webhook). */
+  async revokeVip(gameType: string, userId: string) {
+    await this.conn.collection(`${gameType}_users`).updateOne(
+      { _id: this.oid(userId) },
+      { $set: { isVip: false, updatedAt: new Date() } },
+    );
+    this.logger.log(`👑 VIP révoqué → ${userId}`);
+  }
+
   /**
    * Client-confirmed purchase (RevenueCat client SDK returned success).
    * Idempotent via purchaseId — same purchase can't be credited twice.
@@ -126,6 +176,14 @@ export class ShopService {
       this.logger.warn(`Purchase ${purchaseId} already credited — skipping`);
       return { already: true, amount: existing.amount };
     }
+
+    // VIP Pass (abonnement) : on accorde du temps VIP, pas des coins.
+    const vipMonths = this.VIP_PRODUCTS[productId];
+    if (vipMonths) {
+      const res = await this.grantVip(gameType, userId, vipMonths, { productId, purchaseId, platform });
+      return { vip: true, ...res };
+    }
+
     const pkg = await this.findPackage(productId);
     const total = (pkg.coins || 0) + (pkg.bonus || 0);
     const { newBalance } = await this.creditCoins(gameType, userId, total, 'purchase', {
@@ -146,16 +204,23 @@ export class ShopService {
     if (!event) return { ok: false, reason: 'no event' };
 
     const type = event.type;
+    const userId = event.app_user_id;
+    const productId = event.product_id;
+    const purchaseId = event.transaction_id || event.original_transaction_id;
+    const gameType = event.subscriber_attributes?.gameType?.value || 'belote';
+
+    // Fin d'abonnement VIP → révocation
+    const revoked = ['CANCELLATION', 'EXPIRATION'];
+    if (revoked.includes(type) && this.VIP_PRODUCTS[productId]) {
+      await this.revokeVip(gameType, userId);
+      return { ok: true, vipRevoked: true };
+    }
+
     const credited = ['INITIAL_PURCHASE', 'NON_RENEWING_PURCHASE', 'RENEWAL'];
     if (!credited.includes(type)) {
       this.logger.log(`RevenueCat event ignored: ${type}`);
       return { ok: true, ignored: true };
     }
-
-    const userId = event.app_user_id;
-    const productId = event.product_id;
-    const purchaseId = event.transaction_id || event.original_transaction_id;
-    const gameType = event.subscriber_attributes?.gameType?.value || 'kdoub';
 
     return this.confirmPurchase(gameType, userId, productId, purchaseId, event.store === 'APP_STORE' ? 'ios' : 'android');
   }
