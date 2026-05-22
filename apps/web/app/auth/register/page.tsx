@@ -12,11 +12,11 @@ const inputStyle: React.CSSProperties = {
   paddingRight: '1rem',
   paddingTop: '1rem',
   paddingBottom: '1rem',
-  backgroundColor: '#ffffff',
-  border: '2px solid #e5e7eb',
+  backgroundColor: '#152A47',
+  border: '2px solid rgba(255,255,255,0.12)',
   borderRadius: '0.75rem',
   fontSize: '1rem',
-  color: '#111827',
+  color: '#ffffff',
   outline: 'none',
 };
 
@@ -32,16 +32,16 @@ const iconStyle: React.CSSProperties = {
   transform: 'translateY(-50%)',
   width: '1.25rem',
   height: '1.25rem',
-  color: '#9ca3af',
+  color: '#93C5FD',
   pointerEvents: 'none',
 };
 
 const focusIn = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.target.style.borderColor = '#10b981';
-  e.target.style.boxShadow = '0 0 0 4px rgba(16,185,129,0.1)';
+  e.target.style.borderColor = '#FCD34D';
+  e.target.style.boxShadow = '0 0 0 4px rgba(252,211,77,0.15)';
 };
 const focusOut = (e: React.FocusEvent<HTMLInputElement>) => {
-  e.target.style.borderColor = '#e5e7eb';
+  e.target.style.borderColor = 'rgba(255,255,255,0.12)';
   e.target.style.boxShadow = 'none';
 };
 
@@ -79,10 +79,10 @@ export default function RegisterPage() {
     <div style={{ width: '100%', maxWidth: 440, margin: '0 auto' }}>
       {/* Title */}
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#111827', letterSpacing: '-0.03em', marginBottom: '0.5rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.03em', marginBottom: '0.5rem' }}>
           {t('auth.register')}
         </h1>
-        <p style={{ fontSize: '0.95rem', color: '#6b7280', lineHeight: 1.6 }}>
+        <p style={{ fontSize: '0.95rem', color: '#93C5FD', lineHeight: 1.6 }}>
           {t('auth.registerWelcome')}
         </p>
       </div>
@@ -98,7 +98,7 @@ export default function RegisterPage() {
       <form onSubmit={handleSubmit}>
         {/* Username */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.5rem' }}>
             {t('auth.username')}
           </label>
           <div style={{ position: 'relative' }}>
@@ -109,7 +109,7 @@ export default function RegisterPage() {
 
         {/* Email */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.5rem' }}>
             {t('auth.email')}
           </label>
           <div style={{ position: 'relative' }}>
@@ -120,7 +120,7 @@ export default function RegisterPage() {
 
         {/* Password */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.5rem' }}>
             {t('auth.password')}
           </label>
           <div style={{ position: 'relative' }}>
@@ -137,7 +137,7 @@ export default function RegisterPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: '0.25rem' }}
+              style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#93C5FD', padding: '0.25rem' }}
             >
               {showPassword ? <EyeOff style={{ width: '1.25rem', height: '1.25rem' }} /> : <Eye style={{ width: '1.25rem', height: '1.25rem' }} />}
             </button>
@@ -146,7 +146,7 @@ export default function RegisterPage() {
 
         {/* Confirm Password */}
         <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#374151', marginBottom: '0.5rem' }}>
+          <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: 600, color: '#CBD5E1', marginBottom: '0.5rem' }}>
             {t('auth.confirmPassword')}
           </label>
           <div style={{ position: 'relative' }}>
@@ -161,13 +161,13 @@ export default function RegisterPage() {
             type="checkbox"
             checked={acceptTerms}
             onChange={(e) => setAcceptTerms(e.target.checked)}
-            style={{ width: '1.25rem', height: '1.25rem', accentColor: '#10b981', marginTop: '0.15rem', cursor: 'pointer' }}
+            style={{ width: '1.25rem', height: '1.25rem', accentColor: '#FCD34D', marginTop: '0.15rem', cursor: 'pointer' }}
           />
-          <span style={{ fontSize: '0.875rem', lineHeight: 1.6, color: '#6b7280' }}>
+          <span style={{ fontSize: '0.875rem', lineHeight: 1.6, color: '#93C5FD' }}>
             J&apos;accepte les{' '}
-            <Link href="/terms" style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>conditions</Link>
+            <Link href="/terms" style={{ color: '#FCD34D', fontWeight: 600, textDecoration: 'none' }}>conditions</Link>
             {' '}et la{' '}
-            <Link href="/privacy" style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>politique de confidentialite</Link>
+            <Link href="/privacy" style={{ color: '#FCD34D', fontWeight: 600, textDecoration: 'none' }}>politique de confidentialite</Link>
           </span>
         </label>
 
@@ -178,12 +178,12 @@ export default function RegisterPage() {
           style={{
             width: '100%',
             padding: '1rem',
-            backgroundColor: loading ? '#86efac' : '#10b981',
-            color: '#ffffff',
+            background: loading ? 'rgba(252,211,77,0.5)' : 'linear-gradient(90deg, #FCD34D, #F59E0B)',
+            color: '#0A1535',
             border: 'none',
             borderRadius: '0.75rem',
             fontSize: '1rem',
-            fontWeight: 700,
+            fontWeight: 800,
             cursor: loading ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -205,9 +205,9 @@ export default function RegisterPage() {
       </form>
 
       {/* Login link */}
-      <p style={{ textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
+      <p style={{ textAlign: 'center', fontSize: '0.875rem', color: '#93C5FD' }}>
         {t('auth.hasAccount')}{' '}
-        <Link href="/auth/login" style={{ color: '#10b981', fontWeight: 700, textDecoration: 'none' }}>
+        <Link href="/auth/login" style={{ color: '#FCD34D', fontWeight: 700, textDecoration: 'none' }}>
           {t('auth.login')}
         </Link>
       </p>
