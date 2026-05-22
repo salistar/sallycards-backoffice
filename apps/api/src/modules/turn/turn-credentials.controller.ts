@@ -57,24 +57,32 @@ export class TurnCredentialsController {
       throw new UnauthorizedException('Auth requise pour générer des credentials TURN');
     }
 
+    const turnHost = process.env.TURN_HOST ?? 'turn.salistar.com';
+    const turnPort = process.env.TURN_PORT ?? '3478';
+    const turnTlsPort = process.env.TURN_TLS_PORT ?? '5349';
+    const expiration = Math.floor(Date.now() / 1000) + this.TTL_SECONDS;
+
     const sharedSecret = process.env.TURN_SECRET;
+
+    // Sans secret coturn : on dégrade proprement vers STUN SALISTAR seul
+    // (pas d'erreur). Le STUN couvre la majorité des NAT ; le relay TURN
+    // (NAT symétrique) nécessite TURN_SECRET défini sur le VPS = même valeur
+    // que `static-auth-secret` dans turnserver.conf.
     if (!sharedSecret) {
-      this.logger.error('TURN_SECRET non défini — endpoint TURN désactivé');
-      throw new UnauthorizedException('TURN credentials indisponibles (config serveur)');
+      this.logger.warn('TURN_SECRET non défini — réponse STUN SALISTAR seule (pas de relay)');
+      return {
+        iceServers: [{ urls: `stun:${turnHost}:${turnPort}` }],
+        ttlExpiresAt: expiration,
+      };
     }
 
     // Username : "<expiration_timestamp>:<userId>"
-    const expiration = Math.floor(Date.now() / 1000) + this.TTL_SECONDS;
     const username = `${expiration}:${userId}`;
 
     // Credential : HMAC-SHA1 du username, signé avec le shared secret, encodé base64.
     const hmac = crypto.createHmac('sha1', sharedSecret);
     hmac.update(username);
     const credential = hmac.digest('base64');
-
-    const turnHost = process.env.TURN_HOST ?? 'turn.salistar.com';
-    const turnPort = process.env.TURN_PORT ?? '3478';
-    const turnTlsPort = process.env.TURN_TLS_PORT ?? '5349';
 
     const response: TurnCredentialsResponse = {
       iceServers: [
