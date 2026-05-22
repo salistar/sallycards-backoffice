@@ -39,6 +39,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { WeatherModule } from './modules/weather/weather.module';
 import { SupportModule } from './modules/support/support.module';
 import { ExternalInvitesModule } from './modules/external-invites/external-invites.module';
+import { TurnModule } from './modules/turn/turn.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -125,6 +126,7 @@ import { AppController } from './app.controller';
     WeatherModule,
     SupportModule,
     ExternalInvitesModule,
+    TurnModule,
     InfraMonitoringModule,
     HkimModule,
   ],
