@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../lib/auth-context';
 import { GAMES } from '../../lib/games';
@@ -42,15 +42,22 @@ export default function LoginPage() {
   const { t } = useTranslation();
   const { login } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   // Choix type de jeu (depuis ?game= ou défaut belote) + rôle
-  const [gameType, setGameType] = useState<string>(searchParams?.get('game') || 'belote');
+  const [gameType, setGameType] = useState<string>('belote');
   const [role, setRole] = useState<'player' | 'admin'>('player');
+
+  // Lit ?game= côté client (évite useSearchParams qui exige un <Suspense> au prérendu)
+  useEffect(() => {
+    try {
+      const g = new URLSearchParams(window.location.search).get('game');
+      if (g) setGameType(g);
+    } catch {}
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
