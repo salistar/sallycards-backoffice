@@ -154,6 +154,118 @@ export class MigrationsService implements OnModuleInit {
         }
       },
     },
+    {
+      id: '006-seed-demo-belote-data',
+      description: 'Seed démo Belote : niveau, vouchers, notifications, amis, défis sport, tournois, leaderboard',
+      up: async (conn) => {
+        const now = Date.now();
+        const day = 24 * 3600 * 1000;
+        const D = (ms: number) => new Date(ms);
+
+        // userId = _id du compte démo dans ronda_users (gameType par défaut du login web)
+        const demo = await conn.collection('ronda_users').findOne({ email: 'demo@sallycards.com' });
+        if (!demo) return;
+        const uid = demo._id.toString();
+
+        // ── Niveau / XP Belote ──
+        await conn.collection('levels').updateOne(
+          { userId: uid, gameType: 'belote' },
+          { $set: { userId: uid, gameType: 'belote', level: 7, xp: 180, nextLevelXp: 240, unlockedFeatures: ['Avatars animés', 'Thème Néon', 'Tournois VIP'], lastXpGainAt: D(now), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+
+        // ── Bons d'achat ──
+        const vouchers: any[] = [
+          { code: 'BELOTE-AMZ-25', amount: 25, currency: 'EUR', providerStoreCode: 'amazon', reason: 'Vainqueur tournoi hebdo Belote', status: 'issued' },
+          { code: 'BELOTE-GP-10', amount: 10, currency: 'EUR', providerStoreCode: 'google_play', reason: 'Palier niveau 5 atteint', status: 'issued' },
+          { code: 'BELOTE-DECA-50', amount: 50, currency: 'MAD', providerStoreCode: 'decathlon', reason: 'Défi sport réussi', status: 'claimed' },
+        ];
+        for (const v of vouchers) {
+          await conn.collection('rewards-vouchers').updateOne(
+            { code: v.code },
+            { $set: { ...v, userId: uid, issuedAt: D(now - 6 * day), expiresAt: D(now + 180 * day), ...(v.status === 'claimed' ? { claimedAt: D(now - 2 * day) } : {}), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+
+        // ── Notifications (idempotent par userId+title) ──
+        const notifs: any[] = [
+          { type: 'system', title: 'Bienvenue sur SallyCards', body: 'Ton compte démo est prêt. Découvre la Belote en ligne !', read: true, ago: 7 },
+          { type: 'tournament', title: 'Tournoi Belote hebdo ouvert', body: 'Inscris-toi avant dimanche — 500 gold pour le 1er.', read: false, ago: 2 },
+          { type: 'friend', title: 'Nouvelle demande d’ami', body: 'SaraMansouri souhaite t’ajouter en ami.', read: false, ago: 1 },
+          { type: 'reward', title: 'Bon Amazon 25€ débloqué', body: 'Récupère-le dans l’onglet Récompenses.', read: false, ago: 0 },
+        ];
+        for (const n of notifs) {
+          const set: any = { userId: uid, type: n.type, title: n.title, body: n.body, sentAt: D(now - n.ago * day) };
+          if (n.read) set.readAt = D(now - n.ago * day + 3600 * 1000);
+          await conn.collection('notifications').updateOne({ userId: uid, title: n.title }, { $set: set }, { upsert: true });
+        }
+
+        // ── Amis ──
+        const friends: any[] = [
+          { requesterId: uid, receiverId: 'AmineKabbaj', status: 'accepted' },
+          { requesterId: uid, receiverId: 'NadiaReda', status: 'accepted' },
+          { requesterId: 'YoussefTazi', receiverId: uid, status: 'accepted' },
+          { requesterId: 'SaraMansouri', receiverId: uid, status: 'pending' },
+          { requesterId: uid, receiverId: 'KarimLemrini', status: 'pending' },
+        ];
+        for (const f of friends) {
+          await conn.collection('friends').updateOne(
+            { requesterId: f.requesterId, receiverId: f.receiverId },
+            { $set: { ...f, requestedAt: D(now - 5 * day), ...(f.status === 'accepted' ? { acceptedAt: D(now - 4 * day) } : {}) } },
+            { upsert: true },
+          );
+        }
+
+        // ── Défis sport (guard: seed une seule fois) ──
+        const chCount = await conn.collection('challenges-sport').countDocuments({ $or: [{ userIdGiver: uid }, { userIdReceiver: uid }] });
+        if (chCount === 0) {
+          const A = { lat: 33.5731, lng: -7.5898, label: 'Place Mohammed V' };
+          const B = { lat: 33.595, lng: -7.618, label: 'Corniche Aïn Diab' };
+          await conn.collection('challenges-sport').insertMany([
+            { userIdGiver: 'YoussefTazi', userIdReceiver: uid, gameType: 'belote', type: 'walk', distanceMeters: 1500, pointA: A, pointB: B, deadlineAt: D(now + 2 * day), status: 'in-progress', elapsedTimeMs: 0, rewardPoints: 50, gpsTrack: [], sharedOn: [], createdAt: D(now - day) },
+            { userIdGiver: 'AmineKabbaj', userIdReceiver: uid, gameType: 'belote', type: 'run', distanceMeters: 3000, pointA: A, pointB: B, deadlineAt: D(now - day), status: 'done', elapsedTimeMs: 22 * 60000, rewardPoints: 80, completedAt: D(now - 3 * day), gpsTrack: [], sharedOn: [], createdAt: D(now - 6 * day) },
+            { userIdGiver: uid, userIdReceiver: 'NadiaReda', gameType: 'belote', type: 'walk', distanceMeters: 2000, pointA: A, pointB: B, deadlineAt: D(now - 4 * day), status: 'done', elapsedTimeMs: 18 * 60000, rewardPoints: 60, completedAt: D(now - 5 * day), gpsTrack: [], sharedOn: [], createdAt: D(now - 8 * day) },
+          ]);
+        }
+
+        // ── Tournois Belote (entries → participantsCount) ──
+        const mkEntries = (k: number) => Array.from({ length: k }, (_, i) => ({ userId: `seed-${i}`, displayName: `Joueur ${i + 1}`, score: 1000 - i * 7 }));
+        await conn.collection('tournaments').updateOne({ code: 'SEED-belote-open' }, { $set: { entries: mkEntries(18), updatedAt: D(now) } });
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-belote-weekly' },
+          { $set: { code: 'SEED-belote-weekly', type: 'weekly', variant: 'belote', difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 7 * day, prizes: [{ rank: 1, gold: 1000 }, { rank: 2, gold: 500 }, { rank: 3, gold: 250 }], entries: mkEntries(42), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+
+        // ── Leaderboard belote_users ──
+        await conn.collection('belote_users').updateOne(
+          { email: 'demo@sallycards.com' },
+          { $set: { 'stats.elo': 1428, 'stats.gamesPlayed': 64, 'stats.gamesWon': 41, isGuest: false, updatedAt: D(now) } },
+        );
+        const players: [string, string, number, number, number][] = [
+          ['hamza_belote', 'Hamza', 2180, 412, 360],
+          ['amine_cards', 'Amine', 2090, 380, 322],
+          ['nadia_r', 'Nadia', 1980, 350, 288],
+          ['youssef_t', 'Youssef', 1875, 300, 240],
+          ['sara_m', 'Sara', 1790, 270, 205],
+          ['karim_l', 'Karim', 1655, 240, 168],
+          ['leila_b', 'Leila', 1540, 210, 138],
+          ['omar_s', 'Omar', 1390, 180, 99],
+          ['imane_z', 'Imane', 1260, 150, 70],
+          ['rachid_a', 'Rachid', 1130, 120, 48],
+          ['fatima_e', 'Fatima', 1015, 95, 33],
+          ['mehdi_k', 'Mehdi', 930, 70, 20],
+        ];
+        for (const [email, username, elo, gp, gw] of players) {
+          await conn.collection('belote_users').updateOne(
+            { email: `${email}@sallycards.demo` },
+            { $set: { email: `${email}@sallycards.demo`, username, gameType: 'belote', isGuest: false, role: 'player', avatar: '', locale: 'fr', stats: { elo, gamesPlayed: gp, gamesWon: gw, winStreak: 0, bestWinStreak: 0, totalPlayTimeMs: 0 }, updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}

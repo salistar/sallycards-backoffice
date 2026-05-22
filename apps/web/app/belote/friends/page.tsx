@@ -125,7 +125,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Row({ f, actions }: { f: Friend; actions?: React.ReactNode }) {
-  const initial = f.otherUserId.slice(-2).toUpperCase();
+  const initial = f.otherUserId.slice(0, 2).toUpperCase();
   return (
     <div style={{ ...cardBox, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
