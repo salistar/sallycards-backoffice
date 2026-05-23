@@ -14,6 +14,7 @@ import { ArrowLeft, RefreshCw, Copy, Check } from 'lucide-react';
 import { cardImage, Card } from '../../lib/engine';
 import VoiceCall from '../../../games/Voice';
 import Chat from '../../../games/Chat';
+import ChallengeLosers from '../../../games/ChallengeLosers';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
 const NAVY = '#0A1535'; const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
@@ -100,6 +101,7 @@ export default function ScopaRoom() {
             <h2 style={{ color: '#fff', fontWeight: 900, fontSize: '1.4rem', margin: '8px 0' }}>{snap.winner === myIdx ? 'Vous avez gagné !' : 'L’adversaire gagne'}</h2>
             <p style={{ color: BLUE, marginBottom: 16 }}>Score {snap.scores[myIdx]} – {snap.scores[1 - myIdx]}</p>
             <button onClick={rematch} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: NAVY, fontWeight: 900, border: 'none', borderRadius: 12, padding: '12px 28px', cursor: 'pointer' }}><RefreshCw style={{ width: 18, height: 18 }} /> Revanche</button>
+            {snap.winner === myIdx && <ChallengeLosers gameType="scopa" loserIds={opp && !opp.isBot ? [opp.id] : []} />}
           </div>
         )}
       </div>
