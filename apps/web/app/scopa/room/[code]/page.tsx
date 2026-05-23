@@ -56,7 +56,7 @@ export default function ScopaRoom() {
           <span style={{ color: connected ? '#4ADE80' : '#FCA5A5', fontSize: '0.78rem', fontWeight: 700 }}>{connected ? '● connecté' : '○ connexion…'}</span>
         </div>
 
-        <div style={{ marginBottom: 12 }}><VoiceCall roomCode={code} token={token} /></div>
+        <div style={{ marginBottom: 12 }}><VoiceCall roomCode={`scopa-${code}`} token={token} /></div>
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
           <Pill label={me?.name || 'Vous'} value={snap ? snap.scores[myIdx] : 0} accent={snap?.winner === myIdx} sub={me ? `${me.capturedCount} cartes${me.scope ? ` · 🧹×${me.scope}` : ''}` : ''} />

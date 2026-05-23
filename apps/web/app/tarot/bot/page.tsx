@@ -12,8 +12,9 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import {
   TarotState, TCard, newGame, playHuman, botTurn, rematch, legalCards,
-  cardLabel, cardPoints, isBout, isTrump, isExcuse, SUIT_SYMBOL, SUIT_RED,
+  cardPoints, isBout,
 } from '../lib/engine';
+import TarotCard from '../lib/TarotCardView';
 
 const NAVY = '#0A1535';
 const GOLD = '#FCD34D';
@@ -108,16 +109,3 @@ export default function TarotVsBot() {
   );
 }
 
-function TarotCard({ card, size }: { card: TCard; size: number }) {
-  const h = Math.round(size * 1.5);
-  const base: React.CSSProperties = { width: size, height: h, borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontWeight: 900, boxShadow: '0 4px 10px rgba(0,0,0,0.4)', userSelect: 'none' };
-  if (isExcuse(card)) {
-    return <div style={{ ...base, background: 'linear-gradient(135deg, #fff, #e9d5ff)', color: '#7C3AED', border: '2px solid #7C3AED' }}><span style={{ fontSize: size * 0.5 }}>★</span><span style={{ fontSize: size * 0.18 }}>Excuse</span></div>;
-  }
-  if (isTrump(card)) {
-    const bout = isBout(card);
-    return <div style={{ ...base, background: bout ? 'linear-gradient(135deg, #FCD34D, #F59E0B)' : 'linear-gradient(135deg, #Fde68a, #FCD34D)', color: '#5b3a1a', border: bout ? '2px solid #B45309' : '1px solid #d9a441' }}><span style={{ fontSize: size * 0.42 }}>{card.trump}</span><span style={{ fontSize: size * 0.16 }}>★ atout</span></div>;
-  }
-  const red = SUIT_RED[card.suit!];
-  return <div style={{ ...base, background: '#fff', color: red ? '#DC2626' : '#1f2937', border: '1px solid #cbd5e1' }}><span style={{ fontSize: size * 0.34 }}>{cardLabel(card)}</span><span style={{ fontSize: size * 0.34 }}>{SUIT_SYMBOL[card.suit!]}</span></div>;
-}

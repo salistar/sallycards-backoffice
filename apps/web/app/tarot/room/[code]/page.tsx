@@ -11,7 +11,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import { ArrowLeft, RefreshCw, Copy, Check } from 'lucide-react';
-import { TCard, legalCards, cardLabel, SUIT_SYMBOL, SUIT_RED, isTrump, isExcuse, isBout } from '../../lib/engine';
+import { TCard, legalCards } from '../../lib/engine';
+import TarotCard from '../../lib/TarotCardView';
 import VoiceCall from '../../../games/Voice';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
@@ -61,7 +62,7 @@ export default function TarotRoom() {
           <span style={{ color: connected ? '#4ADE80' : '#FCA5A5', fontSize: '0.78rem', fontWeight: 700 }}>{connected ? '● connecté' : '○ connexion…'}</span>
         </div>
 
-        <div style={{ marginBottom: 12 }}><VoiceCall roomCode={code} token={token} /></div>
+        <div style={{ marginBottom: 12 }}><VoiceCall roomCode={`tarot-${code}`} token={token} /></div>
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ background: 'rgba(252,211,77,0.14)', border: `1px solid ${GOLD}55`, borderRadius: 12, padding: '8px 14px' }}>
@@ -119,11 +120,3 @@ export default function TarotRoom() {
   );
 }
 
-function TarotCard({ card, size }: { card: TCard; size: number }) {
-  const h = Math.round(size * 1.5);
-  const base: React.CSSProperties = { width: size, height: h, borderRadius: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontWeight: 900, boxShadow: '0 4px 10px rgba(0,0,0,0.4)', userSelect: 'none' };
-  if (isExcuse(card)) return <div style={{ ...base, background: 'linear-gradient(135deg, #fff, #e9d5ff)', color: '#7C3AED', border: '2px solid #7C3AED' }}><span style={{ fontSize: size * 0.5 }}>★</span><span style={{ fontSize: size * 0.18 }}>Excuse</span></div>;
-  if (isTrump(card)) { const bout = isBout(card); return <div style={{ ...base, background: bout ? 'linear-gradient(135deg, #FCD34D, #F59E0B)' : 'linear-gradient(135deg, #Fde68a, #FCD34D)', color: '#5b3a1a', border: bout ? '2px solid #B45309' : '1px solid #d9a441' }}><span style={{ fontSize: size * 0.42 }}>{card.trump}</span><span style={{ fontSize: size * 0.16 }}>★ atout</span></div>; }
-  const red = SUIT_RED[card.suit!];
-  return <div style={{ ...base, background: '#fff', color: red ? '#DC2626' : '#1f2937', border: '1px solid #cbd5e1' }}><span style={{ fontSize: size * 0.34 }}>{cardLabel(card)}</span><span style={{ fontSize: size * 0.34 }}>{SUIT_SYMBOL[card.suit!]}</span></div>;
-}
