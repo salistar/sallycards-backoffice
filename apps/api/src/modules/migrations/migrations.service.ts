@@ -522,6 +522,63 @@ export class MigrationsService implements OnModuleInit {
         }
       },
     },
+    {
+      id: '012-seed-kdoub-data',
+      description: 'Seed Kdoub : niveau/XP, tournois, leaderboard, historique parties',
+      up: async (conn) => {
+        const now = Date.now();
+        const day = 24 * 3600 * 1000;
+        const D = (ms: number) => new Date(ms);
+        const demo = await conn.collection('ronda_users').findOne({ email: 'demo@sallycards.com' });
+        const uid = demo ? demo._id.toString() : null;
+        const mkEntries = (k: number) => Array.from({ length: k }, (_, i) => ({ userId: `seed-${i}`, displayName: `Joueur ${i + 1}`, score: 1000 - i * 7 }));
+        const roster: [string, string, number, number, number][] = [
+          ['hamza_casa', 'Hamza', 2160, 400, 330], ['fatima_rabat', 'Fatima', 2050, 355, 286], ['youssef_fes', 'Youssef', 1960, 315, 244],
+          ['amina_marrakech', 'Amina', 1870, 282, 204], ['omar_tanger', 'Omar', 1780, 248, 166], ['khadija_agadir', 'Khadija', 1660, 218, 130],
+          ['mehdi_oujda', 'Mehdi', 1540, 188, 98], ['salma_tetouan', 'Salma', 1400, 160, 72], ['rachid_meknes', 'Rachid', 1270, 134, 53],
+          ['nadia_kenitra', 'Nadia', 1140, 107, 37], ['karim_safi', 'Karim', 1020, 87, 26], ['houda_nador', 'Houda', 930, 65, 16],
+        ];
+        if (uid) {
+          await conn.collection('levels').updateOne(
+            { userId: uid, gameType: 'kdoub' },
+            { $set: { userId: uid, gameType: 'kdoub', level: 5, xp: 130, nextLevelXp: 210, unlockedFeatures: ['Tapis souk', 'Dos de cartes zellige'], lastXpGainAt: D(now), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-kdoub-open' },
+          { $set: { code: 'SEED-kdoub-open', type: 'daily', variant: 'kdoub', difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 30 * day, prizes: [{ rank: 1, gold: 500 }, { rank: 2, gold: 250 }, { rank: 3, gold: 100 }], entries: mkEntries(14), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-kdoub-weekly' },
+          { $set: { code: 'SEED-kdoub-weekly', type: 'weekly', variant: 'kdoub', difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 7 * day, prizes: [{ rank: 1, gold: 1000 }, { rank: 2, gold: 500 }, { rank: 3, gold: 250 }], entries: mkEntries(33), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+        for (const [email, username, elo, gp, gw] of roster) {
+          await conn.collection('kdoub_users').updateOne(
+            { email: `${email}@sallycards.demo` },
+            { $set: { email: `${email}@sallycards.demo`, username, gameType: 'kdoub', isGuest: false, role: 'player', avatar: '', locale: 'fr', stats: { elo, gamesPlayed: gp, gamesWon: gw, winStreak: 0, bestWinStreak: 0, totalPlayTimeMs: 0 }, updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+        await conn.collection('kdoub_users').updateOne(
+          { email: 'demo@sallycards.com' },
+          { $set: { 'stats.elo': 1380, 'stats.gamesPlayed': 30, 'stats.gamesWon': 17, isGuest: false, updatedAt: D(now) } },
+        );
+        const existing = await conn.collection('game_history').countDocuments({ gameId: { $regex: '^seed-kdoub-' } });
+        if (existing === 0) {
+          const docs: any[] = [];
+          for (let i = 0; i < 120; i++) {
+            const ago = Math.floor(Math.random() * 30);
+            const ended = new Date(now - ago * day - Math.floor(Math.random() * day));
+            const dur = 120 + Math.floor(Math.random() * 600);
+            docs.push({ gameId: `seed-kdoub-${i}`, gameType: 'kdoub', players: [], result: {}, duration: dur, mode: 'online', startedAt: new Date(ended.getTime() - dur * 1000), endedAt: ended, createdAt: ended, updatedAt: ended });
+          }
+          for (let i = 0; i < docs.length; i += 200) await conn.collection('game_history').insertMany(docs.slice(i, i + 200));
+        }
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}

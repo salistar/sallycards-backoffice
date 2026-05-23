@@ -40,6 +40,13 @@ export const GAME_META: Record<string, GameMeta> = {
     accent: ['#6366F1', '#312E81'],
     tagline: 'Déduction · pose des questions · devine le personnage',
   },
+  kdoub: {
+    gameType: 'kdoub',
+    label: 'Kdoub',
+    emoji: '🎭',
+    accent: ['#8B5CF6', '#EC4899'],
+    tagline: 'Bluff marocain · 40 cartes · mens, déclare, crie « Kdoub ! »',
+  },
 };
 
 export function metaOf(gameType: string): GameMeta {

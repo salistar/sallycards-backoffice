@@ -10,6 +10,7 @@ import * as Scopa from './scopa-engine';
 import * as Tarot from './tarot-engine';
 import * as Okey from './okey-engine';
 import * as Quiestce from './quiestce-engine';
+import * as Kdoub from './kdoub-engine';
 import { pickBots } from './bot-roster';
 
 export interface Human { userId: string; name: string }
@@ -102,12 +103,23 @@ const quiestceAdapter: GameAdapter = {
   isOver: (s) => Quiestce.quiestceIsOver(s),
 };
 
+const kdoubAdapter: GameAdapter = {
+  seatCount: 4, maxHumans: 4,
+  build: (humans) => Kdoub.buildKdoub(seatsFor(humans, 4, 'kdoub')),
+  view: (s, you) => Kdoub.kdoubView(s, you),
+  currentId: (s) => Kdoub.kdoubCurrentId(s),
+  applyAction: (s, userId, a) => Kdoub.kdoubApply(s, userId, a),
+  advance: (s) => Kdoub.kdoubAdvance(s),
+  isOver: (s) => Kdoub.kdoubIsOver(s),
+};
+
 export const ADAPTERS: Record<string, GameAdapter> = {
   belote: beloteAdapter,
   scopa: scopaAdapter,
   tarot: tarotAdapter,
   okey: okeyAdapter,
   quiestce: quiestceAdapter,
+  kdoub: kdoubAdapter,
 };
 
 export function getAdapter(gameType: string | undefined): GameAdapter {
