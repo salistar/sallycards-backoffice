@@ -76,6 +76,18 @@ export class AdminController {
     return this.adminService.broadcastNotification(dto);
   }
 
+  @Get('notifications/recent')
+  @ApiOperation({ summary: 'Liste des notifications envoyées (groupées)' })
+  async recentNotifications() {
+    return this.adminService.recentNotifications();
+  }
+
+  @Get('tournaments')
+  @ApiOperation({ summary: 'Liste de tous les tournois (admin)' })
+  async listTournaments() {
+    return this.adminService.listTournaments();
+  }
+
   @Post('tournaments')
   @ApiOperation({ summary: 'Créer un tournoi' })
   async createTournament(@Body() dto: any) {
