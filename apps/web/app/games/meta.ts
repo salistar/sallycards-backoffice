@@ -47,6 +47,13 @@ export const GAME_META: Record<string, GameMeta> = {
     accent: ['#8B5CF6', '#EC4899'],
     tagline: 'Bluff marocain · 40 cartes · mens, déclare, crie « Kdoub ! »',
   },
+  kantcopy: {
+    gameType: 'kantcopy',
+    label: 'Kant Copy',
+    emoji: '🤝',
+    accent: ['#0EA5E9', '#14B8A6'],
+    tagline: '2v2 · réunis un carré, signale ton partenaire, « Carte Copie ! »',
+  },
 };
 
 export function metaOf(gameType: string): GameMeta {

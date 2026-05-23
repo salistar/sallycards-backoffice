@@ -10,6 +10,7 @@ export const BOT_ROSTERS: Record<string, string[]> = {
   okey: ['Mehmet', 'Ayşe', 'Mustafa', 'Zeynep', 'Emre', 'Elif', 'Burak', 'Deniz', 'Cem', 'Selin', 'Kerem', 'Derya'],
   quiestce: ['Léon', 'Alice', 'Victor', 'Rose', 'Gaspard', 'Jeanne', 'Théo', 'Manon', 'Noé', 'Lina', 'Sacha', 'Zoé'],
   kdoub: ['Hamza', 'Fatima', 'Youssef', 'Amina', 'Omar', 'Khadija', 'Mehdi', 'Salma', 'Rachid', 'Nadia', 'Karim', 'Houda'],
+  kantcopy: ['Yassine', 'Imane', 'Bilal', 'Sara', 'Anas', 'Ghita', 'Zakaria', 'Meryem', 'Othmane', 'Hind', 'Reda', 'Asmae'],
 };
 
 /** Tire `n` noms de bots distincts pour `gameType` (ordre aléatoire). */
