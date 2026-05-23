@@ -61,6 +61,13 @@ export const GAME_META: Record<string, GameMeta> = {
     accent: ['#84CC16', '#15803D'],
     tagline: 'Mémoire · retourne 2 cartes, trouve les paires, le plus de paires gagne',
   },
+  poker: {
+    gameType: 'poker',
+    label: 'Poker',
+    emoji: '🃏',
+    accent: ['#DC2626', '#7F1D1D'],
+    tagline: "Texas Hold'em No-Limit · 2 cartes · flop/turn/river · all-in",
+  },
 };
 
 export function metaOf(gameType: string): GameMeta {

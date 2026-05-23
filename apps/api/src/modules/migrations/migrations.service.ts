@@ -693,6 +693,63 @@ export class MigrationsService implements OnModuleInit {
         }
       },
     },
+    {
+      id: '015-seed-poker-data',
+      description: 'Seed Poker : niveau/XP, tournois, leaderboard, historique parties',
+      up: async (conn) => {
+        const now = Date.now();
+        const day = 24 * 3600 * 1000;
+        const D = (ms: number) => new Date(ms);
+        const demo = await conn.collection('ronda_users').findOne({ email: 'demo@sallycards.com' });
+        const uid = demo ? demo._id.toString() : null;
+        const mkEntries = (k: number) => Array.from({ length: k }, (_, i) => ({ userId: `seed-${i}`, displayName: `Joueur ${i + 1}`, score: 1000 - i * 7 }));
+        const roster: [string, string, number, number, number][] = [
+          ['carlos_madrid', 'Carlos', 2230, 460, 380], ['maria_sevilla', 'Maria', 2110, 410, 330], ['pedro_valencia', 'Pedro', 2010, 360, 286],
+          ['lucia_bilbao', 'Lucia', 1910, 320, 244], ['diego_malaga', 'Diego', 1810, 286, 206], ['carmen_zaragoza', 'Carmen', 1680, 250, 164],
+          ['javier_murcia', 'Javier', 1550, 214, 122], ['elena_palma', 'Elena', 1410, 180, 90], ['mateo_vigo', 'Mateo', 1275, 150, 64],
+          ['paula_gijon', 'Paula', 1140, 120, 44], ['sergio_coruna', 'Sergio', 1020, 95, 31], ['rosa_granada', 'Rosa', 930, 70, 18],
+        ];
+        if (uid) {
+          await conn.collection('levels').updateOne(
+            { userId: uid, gameType: 'poker' },
+            { $set: { userId: uid, gameType: 'poker', level: 7, xp: 160, nextLevelXp: 240, unlockedFeatures: ['Tapis VIP', 'Jetons or'], lastXpGainAt: D(now), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-poker-open' },
+          { $set: { code: 'SEED-poker-open', type: 'daily', variant: 'poker', difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 30 * day, prizes: [{ rank: 1, gold: 500 }, { rank: 2, gold: 250 }, { rank: 3, gold: 100 }], entries: mkEntries(14), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-poker-weekly' },
+          { $set: { code: 'SEED-poker-weekly', type: 'weekly', variant: 'poker', difficulty: 'hard', status: 'open', startsAt: now, endsAt: now + 7 * day, prizes: [{ rank: 1, gold: 2000 }, { rank: 2, gold: 1000 }, { rank: 3, gold: 500 }], entries: mkEntries(48), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+        for (const [email, username, elo, gp, gw] of roster) {
+          await conn.collection('poker_users').updateOne(
+            { email: `${email}@sallycards.demo` },
+            { $set: { email: `${email}@sallycards.demo`, username, gameType: 'poker', isGuest: false, role: 'player', avatar: '', locale: 'fr', stats: { elo, gamesPlayed: gp, gamesWon: gw, winStreak: 0, bestWinStreak: 0, totalPlayTimeMs: 0 }, updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+        await conn.collection('poker_users').updateOne(
+          { email: 'demo@sallycards.com' },
+          { $set: { 'stats.elo': 1450, 'stats.gamesPlayed': 52, 'stats.gamesWon': 31, isGuest: false, updatedAt: D(now) } },
+        );
+        const existing = await conn.collection('game_history').countDocuments({ gameId: { $regex: '^seed-poker-' } });
+        if (existing === 0) {
+          const docs: any[] = [];
+          for (let i = 0; i < 150; i++) {
+            const ago = Math.floor(Math.random() * 30);
+            const ended = new Date(now - ago * day - Math.floor(Math.random() * day));
+            const dur = 180 + Math.floor(Math.random() * 900);
+            docs.push({ gameId: `seed-poker-${i}`, gameType: 'poker', players: [], result: {}, duration: dur, mode: 'online', startedAt: new Date(ended.getTime() - dur * 1000), endedAt: ended, createdAt: ended, updatedAt: ended });
+          }
+          for (let i = 0; i < docs.length; i += 200) await conn.collection('game_history').insertMany(docs.slice(i, i + 200));
+        }
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}

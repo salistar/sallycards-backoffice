@@ -12,6 +12,7 @@ export const BOT_ROSTERS: Record<string, string[]> = {
   kdoub: ['Hamza', 'Fatima', 'Youssef', 'Amina', 'Omar', 'Khadija', 'Mehdi', 'Salma', 'Rachid', 'Nadia', 'Karim', 'Houda'],
   kantcopy: ['Yassine', 'Imane', 'Bilal', 'Sara', 'Anas', 'Ghita', 'Zakaria', 'Meryem', 'Othmane', 'Hind', 'Reda', 'Asmae'],
   concentration: ['Mia', 'Noah', 'Olivia', 'Liam', 'Ava', 'Ethan', 'Sofia', 'Lucas', 'Chloé', 'Adam', 'Nina', 'Leo'],
+  poker: ['Carlos', 'Maria', 'Pedro', 'Lucia', 'Diego', 'Carmen', 'Javier', 'Elena', 'Mateo', 'Paula', 'Sergio', 'Rosa'],
 };
 
 /** Tire `n` noms de bots distincts pour `gameType` (ordre aléatoire). */
