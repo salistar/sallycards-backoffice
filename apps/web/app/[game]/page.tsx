@@ -12,9 +12,12 @@ const NAVY = '#0A1535';
 const GOLD = '#FCD34D';
 const BLUE = '#93C5FD';
 
+// Jeux qui ont leur propre route web dédiée (hub + vs-bot + écrans data).
+const DEDICATED = ['belote', 'solitaire', 'scopa', 'tarot'];
+
 export function generateStaticParams() {
-  // Pré-génère les slugs connus (sauf belote/solitaire qui ont leur route).
-  return GAMES.filter((g) => g.slug !== 'belote' && g.slug !== 'solitaire').map((g) => ({ game: g.slug }));
+  // Pré-génère les slugs encore "Bientôt" (les jeux dédiés ont leur route).
+  return GAMES.filter((g) => !DEDICATED.includes(g.slug)).map((g) => ({ game: g.slug }));
 }
 
 export default async function ComingSoonGame({ params }: { params: Promise<{ game: string }> }) {
