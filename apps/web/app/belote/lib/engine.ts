@@ -296,13 +296,13 @@ export function initGame(
       team: i % 2,
     });
   }
-  const botNames = ['Pierre', 'Marie', 'Jean'];
+  const botNames = pickBots('belote', botCount);
   for (let i = 0; i < botCount; i++) {
     const teamIndex = (playerNames.length + i) % 2;
     current = gameReducer(current, {
       type: 'JOIN',
       playerId: `bot-${i + 1}`,
-      playerName: botNames[i % botNames.length],
+      playerName: botNames[i] || `Bot ${i + 1}`,
       isBot: true,
       team: teamIndex,
     });
@@ -478,3 +478,6 @@ export function cardImage(card: Card): string {
   return `/cards/spanish40/${card.value}${SUIT_LETTER[card.suit]}.png`;
 }
 export const CARD_BACK = '/cards/spanish40/back.png';
+
+// Roster de bots (≥10 noms distincts par jeu)
+import { pickBots } from '../../games/bots';
