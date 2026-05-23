@@ -109,6 +109,10 @@ class ApiClient {
     });
   }
 
+  async apiDelete<T = any>(path: string): Promise<T> {
+    return this.request<T>(path, { method: 'DELETE' });
+  }
+
   // Auth endpoints
   async login(email: string, password: string): Promise<{
     accessToken: string;

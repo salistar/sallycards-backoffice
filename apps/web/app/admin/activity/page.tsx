@@ -5,8 +5,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { Download } from 'lucide-react';
 import { apiClient } from '../../lib/api';
-import { AdminCard, Flash, inputStyle, GAMES3, GOLD, BLUE } from '../_ui';
+import { AdminCard, Btn, Flash, inputStyle, GAMES3, GOLD, BLUE, downloadCSV } from '../_ui';
 
 export default function AdminActivity() {
   const [gameType, setGameType] = useState('belote');
@@ -25,7 +26,10 @@ export default function AdminActivity() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 10, flexWrap: 'wrap' }}>
         <h1 style={{ color: '#fff', fontSize: '1.6rem', fontWeight: 900, margin: 0 }}>Activité des joueurs</h1>
-        <select value={gameType} onChange={(e) => setGameType(e.target.value)} style={{ ...inputStyle, width: 'auto' }}>{GAMES3.map((g) => <option key={g} value={g} style={{ color: '#000' }}>{g}</option>)}</select>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Btn kind="ghost" onClick={() => downloadCSV(`activite-${gameType}.csv`, rows)}><Download style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />CSV</Btn>
+          <select value={gameType} onChange={(e) => setGameType(e.target.value)} style={{ ...inputStyle, width: 'auto' }}>{GAMES3.map((g) => <option key={g} value={g} style={{ color: '#000' }}>{g}</option>)}</select>
+        </div>
       </div>
       <Flash text={flash} />
       <div style={{ color: BLUE, fontSize: '0.85rem', marginBottom: 12 }}>{actifs} / {rows.length} joueurs actifs (au moins une partie ou un défi).</div>

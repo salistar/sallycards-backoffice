@@ -71,6 +71,18 @@ export function Bars({ data }: { data: { date: string; count: number }[] }) {
   );
 }
 
+/** Génère et télécharge un CSV à partir de lignes (objets). */
+export function downloadCSV(filename: string, rows: any[]) {
+  if (!rows || rows.length === 0) { rows = [{ info: 'aucune donnée' }]; }
+  const cols = Array.from(rows.reduce((s: Set<string>, r) => { Object.keys(r).forEach((k) => s.add(k)); return s; }, new Set<string>()));
+  const esc = (v: any) => { const s = v == null ? '' : typeof v === 'object' ? JSON.stringify(v) : String(v); return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  const csv = [cols.join(';'), ...rows.map((r) => cols.map((c) => esc(r[c])).join(';'))].join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function Flash({ text }: { text: string | null }) {
   if (!text) return null;
   return <div style={{ background: 'rgba(252,211,77,0.12)', border: `1px solid ${GOLD}55`, borderRadius: 10, padding: 12, marginBottom: 14, color: GOLD, fontWeight: 600 }}>{text}</div>;

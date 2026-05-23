@@ -185,6 +185,21 @@ export class AdminService {
     ]).toArray();
     const dailyGames = gh.map((a: any) => ({ date: a._id, count: a.n })).sort((a, b) => a.date.localeCompare(b.date));
 
+    // parties / jour PAR JEU (courbes empilées)
+    const ghByGame = await this.connection.collection('game_history').aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      { $group: { _id: { d: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, g: '$gameType' }, n: { $sum: 1 } } },
+    ]).toArray();
+    const stackMap: Record<string, any> = {};
+    const gameSet = new Set<string>();
+    for (const a of ghByGame as any[]) {
+      const d = a._id.d, g = a._id.g; gameSet.add(g);
+      if (!stackMap[d]) stackMap[d] = { date: d, games: {} };
+      stackMap[d].games[g] = a.n;
+    }
+    const dailyGamesByGame = Object.values(stackMap).sort((a: any, b: any) => a.date.localeCompare(b.date));
+    const gameTypesInGames = [...gameSet].sort();
+
     const days30 = Object.entries(byDay).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
     const sum = (n: number) => days30.filter((d) => new Date(d.date).getTime() >= now - n * dayMs).reduce((s, d) => s + d.count, 0);
 
@@ -212,7 +227,7 @@ export class AdminService {
       newToday: sum(1), newThisWeek: sum(7), newThisMonth: sum(30),
       totalGamesPlayed, totalGamesWon,
       tournaments, openTournaments, vouchers, posts, notifs,
-      perGame, daily: days30, dailyGames,
+      perGame, daily: days30, dailyGames, dailyGamesByGame, gameTypesInGames,
       topPlayers,
       retention: { eligible, j1: eligible ? +((retJ1 / eligible) * 100).toFixed(1) : 0, j7: eligible ? +((retJ7 / eligible) * 100).toFixed(1) : 0 },
       challengeCompletion: { done: hkDone, total: hkTotal, pct: hkTotal ? +((hkDone / hkTotal) * 100).toFixed(1) : 0 },
@@ -252,6 +267,52 @@ export class AdminService {
       },
       db,
     };
+  }
+
+  // ── Journal d'audit ─────────────────────────────────────────────────
+  async audit(action: string, by: string, details: any = {}) {
+    try { await this.connection.collection('admin_audit').insertOne({ action, by: by || 'admin', details, at: new Date() }); } catch { /* */ }
+  }
+  async listAudit(limit = 100) {
+    return this.connection.collection('admin_audit').find({}).sort({ at: -1 }).limit(Math.min(limit, 200)).toArray();
+  }
+
+  // ── Tournois : édition / clôture / suppression ──────────────────────
+  async updateTournament(code: string, dto: { status?: string; prizes?: any[] }) {
+    const set: any = { updatedAt: new Date() };
+    if (dto.status) set.status = dto.status;
+    if (dto.prizes) set.prizes = dto.prizes;
+    await this.connection.collection('tournaments').updateOne({ code }, { $set: set });
+    return { ok: true };
+  }
+  async deleteTournament(code: string) {
+    await this.connection.collection('tournaments').deleteOne({ code });
+    return { ok: true };
+  }
+
+  // ── Modération du mur ───────────────────────────────────────────────
+  async listWall(gameType?: string) {
+    const q: any = gameType && gameType !== 'all' ? { gameType } : {};
+    return this.connection.collection('wall_posts').find(q).sort({ createdAt: -1 }).limit(100).toArray();
+  }
+  async deletePost(id: string) {
+    const { ObjectId } = require('mongodb');
+    let _id: any = id; try { _id = new ObjectId(id); } catch { /* */ }
+    await this.connection.collection('wall_posts').deleteOne({ _id });
+    return { ok: true };
+  }
+  async banUser(userId: string) {
+    await this.connection.collection('banned_users').updateOne({ userId }, { $set: { userId, at: new Date() } }, { upsert: true });
+    const { ObjectId } = require('mongodb');
+    let banned = 0;
+    for (const gt of this.GAME_TYPES) {
+      try { let _id: any = userId; try { _id = new ObjectId(userId); } catch { /* */ } const r = await this.connection.collection(`${gt}_users`).updateOne({ _id }, { $set: { banned: true } }); banned += r.modifiedCount; } catch { /* */ }
+    }
+    return { ok: true, banned };
+  }
+  async unbanUser(userId: string) {
+    await this.connection.collection('banned_users').deleteOne({ userId });
+    return { ok: true };
   }
 
   async listUsers(query: ListUsersQueryDto) {
