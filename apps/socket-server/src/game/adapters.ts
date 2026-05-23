@@ -12,6 +12,7 @@ import * as Okey from './okey-engine';
 import * as Quiestce from './quiestce-engine';
 import * as Kdoub from './kdoub-engine';
 import * as Kantcopy from './kantcopy-engine';
+import * as Concentration from './concentration-engine';
 import { pickBots } from './bot-roster';
 
 export interface Human { userId: string; name: string }
@@ -124,6 +125,16 @@ const kantcopyAdapter: GameAdapter = {
   isOver: (s) => Kantcopy.kantcopyIsOver(s),
 };
 
+const concentrationAdapter: GameAdapter = {
+  seatCount: 4, maxHumans: 4,
+  build: (humans) => Concentration.buildConcentration(seatsFor(humans, 4, 'concentration')),
+  view: (s, you) => Concentration.concentrationView(s, you),
+  currentId: (s) => Concentration.concentrationCurrentId(s),
+  applyAction: (s, userId, a) => Concentration.concentrationApply(s, userId, a),
+  advance: (s) => Concentration.concentrationAdvance(s),
+  isOver: (s) => Concentration.concentrationIsOver(s),
+};
+
 export const ADAPTERS: Record<string, GameAdapter> = {
   belote: beloteAdapter,
   scopa: scopaAdapter,
@@ -132,6 +143,7 @@ export const ADAPTERS: Record<string, GameAdapter> = {
   quiestce: quiestceAdapter,
   kdoub: kdoubAdapter,
   kantcopy: kantcopyAdapter,
+  concentration: concentrationAdapter,
 };
 
 export function getAdapter(gameType: string | undefined): GameAdapter {

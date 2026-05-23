@@ -11,6 +11,7 @@ export const BOT_ROSTERS: Record<string, string[]> = {
   quiestce: ['Léon', 'Alice', 'Victor', 'Rose', 'Gaspard', 'Jeanne', 'Théo', 'Manon', 'Noé', 'Lina', 'Sacha', 'Zoé'],
   kdoub: ['Hamza', 'Fatima', 'Youssef', 'Amina', 'Omar', 'Khadija', 'Mehdi', 'Salma', 'Rachid', 'Nadia', 'Karim', 'Houda'],
   kantcopy: ['Yassine', 'Imane', 'Bilal', 'Sara', 'Anas', 'Ghita', 'Zakaria', 'Meryem', 'Othmane', 'Hind', 'Reda', 'Asmae'],
+  concentration: ['Mia', 'Noah', 'Olivia', 'Liam', 'Ava', 'Ethan', 'Sofia', 'Lucas', 'Chloé', 'Adam', 'Nina', 'Leo'],
 };
 
 export function pickBots(gameType: string, n: number): string[] {

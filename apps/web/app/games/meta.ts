@@ -54,6 +54,13 @@ export const GAME_META: Record<string, GameMeta> = {
     accent: ['#0EA5E9', '#14B8A6'],
     tagline: '2v2 · réunis un carré, signale ton partenaire, « Carte Copie ! »',
   },
+  concentration: {
+    gameType: 'concentration',
+    label: 'Concentration',
+    emoji: '🧠',
+    accent: ['#84CC16', '#15803D'],
+    tagline: 'Mémoire · retourne 2 cartes, trouve les paires, le plus de paires gagne',
+  },
 };
 
 export function metaOf(gameType: string): GameMeta {
