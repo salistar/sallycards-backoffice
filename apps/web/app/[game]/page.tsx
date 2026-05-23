@@ -13,7 +13,7 @@ const GOLD = '#FCD34D';
 const BLUE = '#93C5FD';
 
 // Jeux qui ont leur propre route web dédiée (hub + vs-bot + écrans data).
-const DEDICATED = ['belote', 'solitaire', 'scopa', 'tarot', 'okey', 'quiestce', 'kdoub'];
+const DEDICATED = ['belote', 'solitaire', 'scopa', 'tarot', 'okey', 'quiestce', 'kdoub', 'kantcopy'];
 
 export function generateStaticParams() {
   // Pré-génère les slugs encore "Bientôt" (les jeux dédiés ont leur route).

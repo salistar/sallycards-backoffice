@@ -579,6 +579,63 @@ export class MigrationsService implements OnModuleInit {
         }
       },
     },
+    {
+      id: '013-seed-kantcopy-data',
+      description: 'Seed Kant Copy : niveau/XP, tournois, leaderboard, historique parties',
+      up: async (conn) => {
+        const now = Date.now();
+        const day = 24 * 3600 * 1000;
+        const D = (ms: number) => new Date(ms);
+        const demo = await conn.collection('ronda_users').findOne({ email: 'demo@sallycards.com' });
+        const uid = demo ? demo._id.toString() : null;
+        const mkEntries = (k: number) => Array.from({ length: k }, (_, i) => ({ userId: `seed-${i}`, displayName: `Joueur ${i + 1}`, score: 1000 - i * 7 }));
+        const roster: [string, string, number, number, number][] = [
+          ['yassine_casa', 'Yassine', 2150, 395, 325], ['imane_rabat', 'Imane', 2045, 352, 282], ['bilal_fes', 'Bilal', 1955, 312, 240],
+          ['sara_marrakech', 'Sara', 1865, 280, 202], ['anas_tanger', 'Anas', 1775, 246, 164], ['ghita_agadir', 'Ghita', 1655, 216, 128],
+          ['zakaria_oujda', 'Zakaria', 1535, 186, 97], ['meryem_tetouan', 'Meryem', 1395, 158, 71], ['othmane_meknes', 'Othmane', 1265, 132, 52],
+          ['hind_kenitra', 'Hind', 1135, 106, 36], ['reda_safi', 'Reda', 1015, 86, 25], ['asmae_nador', 'Asmae', 925, 64, 15],
+        ];
+        if (uid) {
+          await conn.collection('levels').updateOne(
+            { userId: uid, gameType: 'kantcopy' },
+            { $set: { userId: uid, gameType: 'kantcopy', level: 4, xp: 95, nextLevelXp: 190, unlockedFeatures: ['Tapis équipe', 'Signaux dorés'], lastXpGainAt: D(now), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-kantcopy-open' },
+          { $set: { code: 'SEED-kantcopy-open', type: 'daily', variant: 'kantcopy', difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 30 * day, prizes: [{ rank: 1, gold: 500 }, { rank: 2, gold: 250 }, { rank: 3, gold: 100 }], entries: mkEntries(14), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-kantcopy-weekly' },
+          { $set: { code: 'SEED-kantcopy-weekly', type: 'weekly', variant: 'kantcopy', difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 7 * day, prizes: [{ rank: 1, gold: 1000 }, { rank: 2, gold: 500 }, { rank: 3, gold: 250 }], entries: mkEntries(33), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+        for (const [email, username, elo, gp, gw] of roster) {
+          await conn.collection('kantcopy_users').updateOne(
+            { email: `${email}@sallycards.demo` },
+            { $set: { email: `${email}@sallycards.demo`, username, gameType: 'kantcopy', isGuest: false, role: 'player', avatar: '', locale: 'fr', stats: { elo, gamesPlayed: gp, gamesWon: gw, winStreak: 0, bestWinStreak: 0, totalPlayTimeMs: 0 }, updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+        await conn.collection('kantcopy_users').updateOne(
+          { email: 'demo@sallycards.com' },
+          { $set: { 'stats.elo': 1360, 'stats.gamesPlayed': 26, 'stats.gamesWon': 15, isGuest: false, updatedAt: D(now) } },
+        );
+        const existing = await conn.collection('game_history').countDocuments({ gameId: { $regex: '^seed-kantcopy-' } });
+        if (existing === 0) {
+          const docs: any[] = [];
+          for (let i = 0; i < 110; i++) {
+            const ago = Math.floor(Math.random() * 30);
+            const ended = new Date(now - ago * day - Math.floor(Math.random() * day));
+            const dur = 120 + Math.floor(Math.random() * 600);
+            docs.push({ gameId: `seed-kantcopy-${i}`, gameType: 'kantcopy', players: [], result: {}, duration: dur, mode: 'online', startedAt: new Date(ended.getTime() - dur * 1000), endedAt: ended, createdAt: ended, updatedAt: ended });
+          }
+          for (let i = 0; i < docs.length; i += 200) await conn.collection('game_history').insertMany(docs.slice(i, i + 200));
+        }
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}

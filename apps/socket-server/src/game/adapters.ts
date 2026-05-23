@@ -11,6 +11,7 @@ import * as Tarot from './tarot-engine';
 import * as Okey from './okey-engine';
 import * as Quiestce from './quiestce-engine';
 import * as Kdoub from './kdoub-engine';
+import * as Kantcopy from './kantcopy-engine';
 import { pickBots } from './bot-roster';
 
 export interface Human { userId: string; name: string }
@@ -113,6 +114,16 @@ const kdoubAdapter: GameAdapter = {
   isOver: (s) => Kdoub.kdoubIsOver(s),
 };
 
+const kantcopyAdapter: GameAdapter = {
+  seatCount: 4, maxHumans: 4,
+  build: (humans) => Kantcopy.buildKantcopy(seatsFor(humans, 4, 'kantcopy')),
+  view: (s, you) => Kantcopy.kantcopyView(s, you),
+  currentId: (s) => Kantcopy.kantcopyCurrentId(s),
+  applyAction: (s, userId, a) => Kantcopy.kantcopyApply(s, userId, a),
+  advance: (s) => Kantcopy.kantcopyAdvance(s),
+  isOver: (s) => Kantcopy.kantcopyIsOver(s),
+};
+
 export const ADAPTERS: Record<string, GameAdapter> = {
   belote: beloteAdapter,
   scopa: scopaAdapter,
@@ -120,6 +131,7 @@ export const ADAPTERS: Record<string, GameAdapter> = {
   okey: okeyAdapter,
   quiestce: quiestceAdapter,
   kdoub: kdoubAdapter,
+  kantcopy: kantcopyAdapter,
 };
 
 export function getAdapter(gameType: string | undefined): GameAdapter {
