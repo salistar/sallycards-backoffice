@@ -46,6 +46,25 @@ export class AdminService {
     return { sent, games };
   }
 
+  /** Liste des notifications envoyées, groupées par titre/message (broadcasts). */
+  async recentNotifications(limit = 40) {
+    return this.connection.collection('notifications').aggregate([
+      { $group: { _id: { title: '$title', body: '$body', type: '$type' }, recipients: { $sum: 1 }, sentAt: { $max: '$sentAt' } } },
+      { $sort: { sentAt: -1 } },
+      { $limit: limit },
+      { $project: { _id: 0, title: '$_id.title', body: '$_id.body', type: '$_id.type', recipients: 1, sentAt: 1 } },
+    ]).toArray();
+  }
+
+  /** Liste de tous les tournois (admin). */
+  async listTournaments() {
+    const docs = await this.connection.collection('tournaments').find({}).sort({ createdAt: -1 }).limit(100).toArray();
+    return docs.map((t: any) => ({
+      code: t.code, type: t.type, variant: t.variant, status: t.status,
+      participants: t.entries?.length ?? 0, startsAt: t.startsAt, endsAt: t.endsAt, prizes: t.prizes ?? [],
+    }));
+  }
+
   /** Crée un tournoi ouvert. */
   async createTournament(dto: { gameType: string; type?: string; name?: string; prizes?: any[]; startsAt?: number; endsAt?: number }) {
     if (!dto?.gameType) throw new BadRequestException('gameType requis');
