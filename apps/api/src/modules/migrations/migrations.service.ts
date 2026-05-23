@@ -750,6 +750,63 @@ export class MigrationsService implements OnModuleInit {
         }
       },
     },
+    {
+      id: '016-seed-ronda-data',
+      description: 'Seed Ronda : niveau/XP, tournois, leaderboard, historique parties',
+      up: async (conn) => {
+        const now = Date.now();
+        const day = 24 * 3600 * 1000;
+        const D = (ms: number) => new Date(ms);
+        const demo = await conn.collection('ronda_users').findOne({ email: 'demo@sallycards.com' });
+        const uid = demo ? demo._id.toString() : null;
+        const mkEntries = (k: number) => Array.from({ length: k }, (_, i) => ({ userId: `seed-${i}`, displayName: `Joueur ${i + 1}`, score: 1000 - i * 7 }));
+        const roster: [string, string, number, number, number][] = [
+          ['hamza_casa', 'Hamza', 2200, 450, 372], ['fatima_rabat', 'Fatima', 2080, 405, 322], ['youssef_fes', 'Youssef', 1985, 358, 280],
+          ['amina_marrakech', 'Amina', 1890, 318, 240], ['nabil_tanger', 'Nabil', 1795, 282, 200], ['samira_agadir', 'Samira', 1670, 248, 160],
+          ['khalid_oujda', 'Khalid', 1545, 212, 120], ['latifa_tetouan', 'Latifa', 1405, 178, 90], ['tarik_meknes', 'Tarik', 1270, 148, 63],
+          ['najat_kenitra', 'Najat', 1140, 118, 43], ['soufiane_safi', 'Soufiane', 1020, 93, 30], ['wafa_nador', 'Wafa', 930, 70, 17],
+        ];
+        if (uid) {
+          await conn.collection('levels').updateOne(
+            { userId: uid, gameType: 'ronda' },
+            { $set: { userId: uid, gameType: 'ronda', level: 8, xp: 175, nextLevelXp: 260, unlockedFeatures: ['Tapis souk', 'Cartes andalouses'], lastXpGainAt: D(now), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-ronda-open' },
+          { $set: { code: 'SEED-ronda-open', type: 'daily', variant: 'ronda', difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 30 * day, prizes: [{ rank: 1, gold: 500 }, { rank: 2, gold: 250 }, { rank: 3, gold: 100 }], entries: mkEntries(14), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-ronda-weekly' },
+          { $set: { code: 'SEED-ronda-weekly', type: 'weekly', variant: 'ronda', difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 7 * day, prizes: [{ rank: 1, gold: 1000 }, { rank: 2, gold: 500 }, { rank: 3, gold: 250 }], entries: mkEntries(33), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+        for (const [email, username, elo, gp, gw] of roster) {
+          await conn.collection('ronda_users').updateOne(
+            { email: `${email}@sallycards.demo` },
+            { $set: { email: `${email}@sallycards.demo`, username, gameType: 'ronda', isGuest: false, role: 'player', avatar: '', locale: 'fr', stats: { elo, gamesPlayed: gp, gamesWon: gw, winStreak: 0, bestWinStreak: 0, totalPlayTimeMs: 0 }, updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+        await conn.collection('ronda_users').updateOne(
+          { email: 'demo@sallycards.com' },
+          { $set: { 'stats.elo': 1465, 'stats.gamesPlayed': 58, 'stats.gamesWon': 35, isGuest: false, updatedAt: D(now) } },
+        );
+        const existing = await conn.collection('game_history').countDocuments({ gameId: { $regex: '^seed-ronda-' } });
+        if (existing === 0) {
+          const docs: any[] = [];
+          for (let i = 0; i < 160; i++) {
+            const ago = Math.floor(Math.random() * 30);
+            const ended = new Date(now - ago * day - Math.floor(Math.random() * day));
+            const dur = 120 + Math.floor(Math.random() * 500);
+            docs.push({ gameId: `seed-ronda-${i}`, gameType: 'ronda', players: [], result: {}, duration: dur, mode: 'online', startedAt: new Date(ended.getTime() - dur * 1000), endedAt: ended, createdAt: ended, updatedAt: ended });
+          }
+          for (let i = 0; i < docs.length; i += 200) await conn.collection('game_history').insertMany(docs.slice(i, i + 200));
+        }
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}

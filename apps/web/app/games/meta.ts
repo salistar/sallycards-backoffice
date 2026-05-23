@@ -68,6 +68,13 @@ export const GAME_META: Record<string, GameMeta> = {
     accent: ['#DC2626', '#7F1D1D'],
     tagline: "Texas Hold'em No-Limit · 2 cartes · flop/turn/river · all-in",
   },
+  ronda: {
+    gameType: 'ronda',
+    label: 'Ronda',
+    emoji: '🎴',
+    accent: ['#F59E0B', '#EF4444'],
+    tagline: 'Ronda marocaine · 40 cartes · capture par valeur · ronda & tringa',
+  },
 };
 
 export function metaOf(gameType: string): GameMeta {

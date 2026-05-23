@@ -13,6 +13,7 @@ export const BOT_ROSTERS: Record<string, string[]> = {
   kantcopy: ['Yassine', 'Imane', 'Bilal', 'Sara', 'Anas', 'Ghita', 'Zakaria', 'Meryem', 'Othmane', 'Hind', 'Reda', 'Asmae'],
   concentration: ['Mia', 'Noah', 'Olivia', 'Liam', 'Ava', 'Ethan', 'Sofia', 'Lucas', 'Chloé', 'Adam', 'Nina', 'Leo'],
   poker: ['Carlos', 'Maria', 'Pedro', 'Lucia', 'Diego', 'Carmen', 'Javier', 'Elena', 'Mateo', 'Paula', 'Sergio', 'Rosa'],
+  ronda: ['Hamza', 'Fatima', 'Youssef', 'Amina', 'Nabil', 'Samira', 'Khalid', 'Latifa', 'Tarik', 'Najat', 'Soufiane', 'Wafa'],
 };
 
 export function pickBots(gameType: string, n: number): string[] {

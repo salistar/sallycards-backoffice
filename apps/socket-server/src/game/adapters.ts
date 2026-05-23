@@ -14,6 +14,7 @@ import * as Kdoub from './kdoub-engine';
 import * as Kantcopy from './kantcopy-engine';
 import * as Concentration from './concentration-engine';
 import * as Poker from './poker-engine';
+import * as Ronda from './ronda-engine';
 import { pickBots } from './bot-roster';
 
 export interface Human { userId: string; name: string }
@@ -146,6 +147,16 @@ const pokerAdapter: GameAdapter = {
   isOver: (s) => Poker.pokerIsOver(s),
 };
 
+const rondaAdapter: GameAdapter = {
+  seatCount: 4, maxHumans: 4,
+  build: (humans) => Ronda.buildRonda(seatsFor(humans, 4, 'ronda')),
+  view: (s, you) => Ronda.rondaView(s, you),
+  currentId: (s) => Ronda.rondaCurrentId(s),
+  applyAction: (s, userId, a) => Ronda.rondaApply(s, userId, a),
+  advance: (s) => Ronda.rondaAdvance(s),
+  isOver: (s) => Ronda.rondaIsOver(s),
+};
+
 export const ADAPTERS: Record<string, GameAdapter> = {
   belote: beloteAdapter,
   scopa: scopaAdapter,
@@ -156,6 +167,7 @@ export const ADAPTERS: Record<string, GameAdapter> = {
   kantcopy: kantcopyAdapter,
   concentration: concentrationAdapter,
   poker: pokerAdapter,
+  ronda: rondaAdapter,
 };
 
 export function getAdapter(gameType: string | undefined): GameAdapter {
