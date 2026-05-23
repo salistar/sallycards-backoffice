@@ -9,7 +9,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Footprints, MapPin, Send, CheckCircle2, Clock } from 'lucide-react';
+import { Footprints, MapPin, Send, CheckCircle2, Clock, Heart, PenLine } from 'lucide-react';
 import { apiClient } from '../lib/api';
 import { Shell, StateNote, cardBox, GOLD, BLUE } from './Shell';
 import { StaticRouteMap } from './GeoMap';
@@ -34,7 +34,15 @@ export function HkimWall({ gameType }: { gameType: string }) {
   const [sport, setSport] = useState<Sport[] | null>(null);
   const [hk, setHk] = useState<Hk[] | null>(null);
   const [feed, setFeed] = useState<Hk[] | null>(null);
+  const [posts, setPosts] = useState<any[] | null>(null);
+  const [postText, setPostText] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const loadPosts = useCallback(async () => {
+    try { const d = await apiClient.apiGet<any[]>(`/wall/${gameType}?limit=40`); setPosts(Array.isArray(d) ? d : []); } catch { setPosts([]); }
+  }, [gameType]);
+  const publish = async () => { const t = postText.trim(); if (!t) return; setPostText(''); try { await apiClient.apiPost(`/wall/${gameType}`, { text: t }); await loadPosts(); } catch { /* */ } };
+  const likePost = async (id: string) => { try { await apiClient.apiPost(`/wall/${gameType}/${id}/like`, {}); await loadPosts(); } catch { /* */ } };
 
   const loadMine = useCallback(async () => {
     try {
@@ -60,7 +68,7 @@ export function HkimWall({ gameType }: { gameType: string }) {
     } catch { /* */ }
   }, [gameType]);
 
-  useEffect(() => { loadMine(); loadFeed(); }, [loadMine, loadFeed]);
+  useEffect(() => { loadMine(); loadFeed(); loadPosts(); }, [loadMine, loadFeed, loadPosts]);
 
   const completeHk = async (id: string) => { try { await apiClient.apiPost(`/hkim/${gameType}/${id}/complete`, {}); await Promise.all([loadMine(), loadFeed()]); } catch { /* */ } };
   const comment = async (id: string, text: string) => { if (!text.trim()) return; try { await apiClient.apiPost(`/hkim/${gameType}/${id}/comments`, { text: text.trim() }); await loadFeed(); } catch { /* */ } };
@@ -102,8 +110,34 @@ export function HkimWall({ gameType }: { gameType: string }) {
 
       {tab === 'wall' && (
         <>
+          {/* Composer : poster un message libre */}
+          <div style={{ ...cardBox, marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <textarea value={postText} onChange={(e) => setPostText(e.target.value)} placeholder="Partage quelque chose avec la communauté…" maxLength={280} rows={2} style={{ flex: 1, background: '#0F2238', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '10px 12px', color: '#fff', outline: 'none', resize: 'vertical', fontFamily: 'inherit', fontSize: '0.88rem' }} />
+              <button onClick={publish} disabled={!postText.trim()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, alignSelf: 'flex-end', background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: '#0A1535', fontWeight: 800, border: 'none', borderRadius: 10, padding: '10px 16px', cursor: 'pointer', opacity: postText.trim() ? 1 : 0.6 }}><PenLine style={{ width: 15, height: 15 }} /> Poster</button>
+            </div>
+          </div>
+
+          {/* Posts libres */}
+          <div style={{ display: 'grid', gap: 10, marginBottom: 22 }}>
+            {posts && posts.length === 0 && <StateNote kind="empty" text="Sois le premier à poster sur le mur 👋" />}
+            {posts?.map((p) => (
+              <div key={p._id} style={cardBox}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(252,211,77,0.15)', color: GOLD, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.72rem' }}>{(p.username || '?').slice(0, 2).toUpperCase()}</div>
+                  <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.86rem' }}>{p.username}</span>
+                  {p.createdAt && <span style={{ color: '#64748B', fontSize: '0.72rem' }}>· {new Date(p.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>}
+                </div>
+                <div style={{ color: '#E2E8F0', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>{p.text}</div>
+                <button onClick={() => likePost(p._id)} style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, background: 'transparent', border: 'none', color: (p.likes?.length ? '#F87171' : '#94A3B8'), cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem' }}><Heart style={{ width: 15, height: 15 }} /> {p.likes?.length || 0}</button>
+              </div>
+            ))}
+          </div>
+
+          {/* Activité défis (HKIM réussis) */}
+          <h2 style={{ color: '#fff', fontSize: '0.98rem', fontWeight: 800, margin: '4px 0 10px' }}>Activité défis</h2>
           {!feed && <StateNote kind="loading" text="Chargement…" />}
-          {feed && feed.length === 0 && <StateNote kind="empty" text="Le mur est vide pour l'instant." />}
+          {feed && feed.length === 0 && <StateNote kind="empty" text="Aucun défi réussi pour l'instant." />}
           <div style={{ display: 'grid', gap: 14 }}>
             {feed?.map((h) => <WallCard key={h._id} h={h} onComment={(t) => comment(h._id, t)} />)}
           </div>

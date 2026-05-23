@@ -128,6 +128,16 @@ export class PresenceGateway
     }
   }
 
+  // ── presence:list ─────────────────────────────────────────────────────────
+  // Permet à un client (ex. écran "Trouver des joueurs") de récupérer la liste
+  // complète des utilisateurs en ligne à la connexion.
+  @SubscribeMessage('presence:list')
+  handleList(@ConnectedSocket() client: AuthenticatedSocket) {
+    const users = this.getOnlineUsers();
+    client.emit('presence:list', { users });
+    return { users };
+  }
+
   // ── presence:heartbeat ────────────────────────────────────────────────────
 
   @SubscribeMessage('presence:heartbeat')

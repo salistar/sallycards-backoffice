@@ -36,6 +36,7 @@ import { RewardsModule } from './modules/rewards/rewards.module';
 import { LevelsModule } from './modules/levels/levels.module';
 import { FriendsModule } from './modules/friends/friends.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PostsModule } from './modules/posts/posts.module';
 import { WeatherModule } from './modules/weather/weather.module';
 import { SupportModule } from './modules/support/support.module';
 import { ExternalInvitesModule } from './modules/external-invites/external-invites.module';
@@ -123,6 +124,7 @@ import { AppController } from './app.controller';
     LevelsModule,
     FriendsModule,
     NotificationsModule,
+    PostsModule,
     WeatherModule,
     SupportModule,
     ExternalInvitesModule,
