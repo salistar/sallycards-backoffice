@@ -8,6 +8,8 @@ import {
 import { InjectModel, InjectConnection } from '@nestjs/mongoose';
 import { Model, Connection } from 'mongoose';
 import * as bcrypt from 'bcrypt';
+import * as os from 'os';
+import { promises as fsp } from 'fs';
 import { UserDocument } from '../users/schemas/user.schema';
 import {
   GameHistory,
@@ -133,14 +135,18 @@ export class AdminService {
     });
   }
 
-  /** Stats détaillées : joueurs jour/semaine/mois, par jeu, parties, contenus, ressources. */
-  async getOverview() {
+  /** Stats détaillées calculées EN TEMPS RÉEL depuis la BD (fenêtre `days`). */
+  async getOverview(days = 30) {
+    const win = Math.min(365, Math.max(1, days || 30));
     const now = Date.now();
     const dayMs = 24 * 3600 * 1000;
-    const since = new Date(now - 30 * dayMs);
+    const since = new Date(now - win * dayMs);
     const byDay: Record<string, number> = {};
     let total = 0, online = 0, totalGamesPlayed = 0, totalGamesWon = 0;
+    let retJ1 = 0, retJ7 = 0, eligible = 0;
     const perGame: { gameType: string; users: number; online: number; gamesPlayed: number }[] = [];
+    const topAll: { username: string; elo: number; gameType: string }[] = [];
+
     for (const gt of this.GAME_TYPES) {
       const col = this.connection.collection(`${gt}_users`);
       const users = await col.countDocuments({});
@@ -149,27 +155,102 @@ export class AdminService {
       const gp = (gpAgg[0] as any)?.gp || 0; const gw = (gpAgg[0] as any)?.gw || 0;
       total += users; online += onlineG; totalGamesPlayed += gp; totalGamesWon += gw;
       perGame.push({ gameType: gt, users, online: onlineG, gamesPlayed: gp });
+
+      // inscriptions par jour (fenêtre)
       const agg = await col.aggregate([
         { $match: { createdAt: { $gte: since } } },
         { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, n: { $sum: 1 } } },
       ]).toArray();
       for (const a of agg) byDay[a._id] = (byDay[a._id] || 0) + a.n;
+
+      // rétention (proxy réel : écart updatedAt - createdAt)
+      if (['belote', 'scopa', 'tarot'].includes(gt)) {
+        const r = await col.aggregate([
+          { $match: { createdAt: { $exists: true }, updatedAt: { $exists: true } } },
+          { $project: { gap: { $subtract: ['$updatedAt', '$createdAt'] } } },
+          { $group: { _id: null, total: { $sum: 1 }, j1: { $sum: { $cond: [{ $gte: ['$gap', dayMs] }, 1, 0] } }, j7: { $sum: { $cond: [{ $gte: ['$gap', 7 * dayMs] }, 1, 0] } } } },
+        ]).toArray();
+        const rr: any = r[0]; if (rr) { eligible += rr.total; retJ1 += rr.j1; retJ7 += rr.j7; }
+        // top ELO du jeu
+        const tops = await col.find({ isGuest: { $ne: true } }, { projection: { username: 1, 'stats.elo': 1 } }).sort({ 'stats.elo': -1 }).limit(10).toArray();
+        for (const u of tops) topAll.push({ username: (u as any).username || 'Joueur', elo: (u as any).stats?.elo || 1000, gameType: gt });
+      }
     }
     perGame.sort((a, b) => b.users - a.users);
-    const days = Object.entries(byDay).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
-    const sum = (n: number) => days.filter((d) => new Date(d.date).getTime() >= now - n * dayMs).reduce((s, d) => s + d.count, 0);
+
+    // parties / jour depuis game_history (réel)
+    const gh = await this.connection.collection('game_history').aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, n: { $sum: 1 } } },
+    ]).toArray();
+    const dailyGames = gh.map((a: any) => ({ date: a._id, count: a.n })).sort((a, b) => a.date.localeCompare(b.date));
+
+    const days30 = Object.entries(byDay).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
+    const sum = (n: number) => days30.filter((d) => new Date(d.date).getTime() >= now - n * dayMs).reduce((s, d) => s + d.count, 0);
+
+    const topPlayers = topAll.sort((a, b) => b.elo - a.elo).slice(0, 10);
+
+    // complétion des défis (réel : hkim done / total)
+    let hkDone = 0, hkTotal = 0;
+    for (const gt of ['belote', 'scopa', 'tarot']) {
+      try {
+        const c = this.connection.collection(`hkim_${gt}`);
+        hkDone += await c.countDocuments({ status: 'done' });
+        hkTotal += await c.countDocuments({});
+      } catch { /* */ }
+    }
+
     const tournaments = await this.connection.collection('tournaments').countDocuments({});
     const openTournaments = await this.connection.collection('tournaments').countDocuments({ status: 'open' });
     const vouchers = await this.connection.collection('rewards-vouchers').countDocuments({});
     const posts = await this.connection.collection('wall_posts').countDocuments({});
     const notifs = await this.connection.collection('notifications').countDocuments({});
+
     return {
+      days: win,
       totalUsers: total, onlineUsers: online,
       newToday: sum(1), newThisWeek: sum(7), newThisMonth: sum(30),
       totalGamesPlayed, totalGamesWon,
       tournaments, openTournaments, vouchers, posts, notifs,
-      perGame, daily: days,
-      resources: { uptimePct: 99.9, note: 'Heartbeats infra via /infra-monitoring' },
+      perGame, daily: days30, dailyGames,
+      topPlayers,
+      retention: { eligible, j1: eligible ? +((retJ1 / eligible) * 100).toFixed(1) : 0, j7: eligible ? +((retJ7 / eligible) * 100).toFixed(1) : 0 },
+      challengeCompletion: { done: hkDone, total: hkTotal, pct: hkTotal ? +((hkDone / hkTotal) * 100).toFixed(1) : 0 },
+    };
+  }
+
+  /** Métriques RÉELLES serveur (CPU/RAM/disque/uptime) + base de données. */
+  async getMetrics() {
+    const memTotal = os.totalmem(), memFree = os.freemem();
+    let disk: any = null;
+    try {
+      const s: any = await (fsp as any).statfs('/');
+      disk = { totalGB: +((s.blocks * s.bsize) / 1e9).toFixed(1), freeGB: +((s.bavail * s.bsize) / 1e9).toFixed(1) };
+      disk.usedPct = disk.totalGB ? +(((disk.totalGB - disk.freeGB) / disk.totalGB) * 100).toFixed(1) : 0;
+    } catch { /* statfs indispo */ }
+    let db: any = {};
+    try {
+      const st: any = await (this.connection.db as any).stats();
+      db = { collections: st.collections, objects: st.objects, dataSizeMB: +(st.dataSize / 1e6).toFixed(1), storageSizeMB: +(st.storageSize / 1e6).toFixed(1), indexes: st.indexes, indexSizeMB: +(st.indexSize / 1e6).toFixed(1) };
+    } catch { /* */ }
+    try {
+      const ss: any = await (this.connection.db as any).command({ serverStatus: 1 });
+      db.version = ss.version; db.connections = ss.connections?.current; db.uptimeSec = ss.uptime;
+    } catch { /* */ }
+    const load = os.loadavg();
+    return {
+      server: {
+        uptimeSec: Math.round(os.uptime()),
+        loadAvg: load.map((n) => +n.toFixed(2)),
+        cpus: os.cpus().length,
+        cpuLoadPct: os.cpus().length ? +Math.min(100, (load[0] / os.cpus().length) * 100).toFixed(1) : 0,
+        memTotalMB: Math.round(memTotal / 1e6),
+        memUsedMB: Math.round((memTotal - memFree) / 1e6),
+        memUsedPct: +(((memTotal - memFree) / memTotal) * 100).toFixed(1),
+        processRssMB: Math.round(process.memoryUsage().rss / 1e6),
+        disk,
+      },
+      db,
     };
   }
 
