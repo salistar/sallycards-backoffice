@@ -147,3 +147,14 @@ export function botStep(st: OkeyState): OkeyState {
 }
 
 export function tileLabel(t: Tile): string { return t.joker ? '★' : String(t.value); }
+
+// ── Rendu avec de vraies cartes (jeu de 52 doublé + 2 jokers) ───────────────
+// Okey = 4 couleurs × 13 valeurs ×2 + 2 jokers = 106 → mappe exactement sur un
+// double jeu français. On associe chaque couleur Okey à une enseigne réelle.
+const SUIT_OF: Record<OColor, string> = { R: 'H', Y: 'D', B: 'C', K: 'S' };
+function rankLetter(v: number): string { return v === 1 ? 'A' : v === 10 ? '0' : v === 11 ? 'J' : v === 12 ? 'Q' : v === 13 ? 'K' : String(v); }
+/** Chemin de l'image de carte réelle pour une tuile (joker → dos rouge). */
+export function tileImage(t: Tile): string {
+  if (t.joker) return '/cards/french52/back_red.svg';
+  return `/cards/french52/${rankLetter(t.value!)}${SUIT_OF[t.color!]}.png`;
+}

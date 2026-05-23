@@ -5,10 +5,11 @@
  */
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
-import { OkeyState, Tile, newGame, drawTile, discardTile, finish, botStep, finishDiscard, tileLabel, COLOR_HEX } from '../lib/engine';
+import { OkeyState, Tile, newGame, drawTile, discardTile, finish, botStep, finishDiscard, tileLabel, tileImage } from '../lib/engine';
 
 const NAVY = '#0A1535'; const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
 
@@ -49,7 +50,7 @@ export default function OkeyVsBot() {
         {/* Center : pioche + défausse */}
         <div style={{ background: `radial-gradient(circle at 50% 40%, ${FELT}, #093d24)`, borderRadius: 24, border: '6px solid #5b3a1a', padding: 18, marginBottom: 14, display: 'flex', gap: 24, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'center' }}>
-            <button onClick={() => myTurn && st.phase === 'draw' && setSt(drawTile(st, 'pile'))} disabled={!(myTurn && st.phase === 'draw')} style={{ width: 54, height: 74, borderRadius: 10, background: 'linear-gradient(135deg,#1f2937,#374151)', border: `2px solid ${myTurn && st.phase === 'draw' ? GOLD : '#4b5563'}`, color: '#fff', cursor: myTurn && st.phase === 'draw' ? 'pointer' : 'default', fontWeight: 800 }}>🀫</button>
+            <button onClick={() => myTurn && st.phase === 'draw' && setSt(drawTile(st, 'pile'))} disabled={!(myTurn && st.phase === 'draw')} style={{ width: 54, height: 74, borderRadius: 10, padding: 0, overflow: 'hidden', background: '#fff', border: `2px solid ${myTurn && st.phase === 'draw' ? GOLD : '#4b5563'}`, cursor: myTurn && st.phase === 'draw' ? 'pointer' : 'default' }}><Image src="/cards/french52/back.png" alt="pioche" width={54} height={74} style={{ display: 'block', width: 54, height: 74, objectFit: 'cover' }} /></button>
             <div style={{ color: BLUE, fontSize: '0.7rem', marginTop: 4 }}>Pioche ({st.drawPile.length})</div>
           </div>
           <div style={{ textAlign: 'center' }}>
@@ -84,11 +85,12 @@ export default function OkeyVsBot() {
 }
 
 function TileView({ t, onClick, interactive }: { t: Tile; onClick?: () => void; interactive?: boolean }) {
-  const bg = t.joker ? 'linear-gradient(135deg,#FCD34D,#F59E0B)' : '#fff';
-  const col = t.joker ? '#5b3a1a' : COLOR_HEX[t.color!];
+  const w = 48, h = 67;
   return (
-    <button onClick={onClick} disabled={!interactive} style={{ width: 46, height: 64, borderRadius: 8, background: bg, border: interactive ? `2px solid ${'#FCD34D'}` : '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: interactive ? 'pointer' : 'default', boxShadow: '0 3px 8px rgba(0,0,0,0.4)', padding: 0 }}>
-      <span style={{ color: col, fontWeight: 900, fontSize: t.joker ? 24 : 20 }}>{tileLabel(t)}</span>
+    <button onClick={onClick} disabled={!interactive} style={{ width: w, height: h, borderRadius: 8, background: '#fff', border: interactive ? `2px solid ${GOLD}` : '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: interactive ? 'pointer' : 'default', boxShadow: '0 3px 8px rgba(0,0,0,0.4)', padding: 0, overflow: 'hidden' }}>
+      {t.joker
+        ? <span style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#FCD34D,#F59E0B)', color: '#5b3a1a', fontWeight: 900, fontSize: 26 }}>★</span>
+        : <Image src={tileImage(t)} alt={tileLabel(t)} width={w} height={h} style={{ display: 'block', width: w, height: h, objectFit: 'cover' }} />}
     </button>
   );
 }

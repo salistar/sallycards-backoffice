@@ -13,6 +13,7 @@ import { io, Socket } from 'socket.io-client';
 import { ArrowLeft, RefreshCw, Copy, Check } from 'lucide-react';
 import { TCard, legalCards } from '../../lib/engine';
 import TarotCard from '../../lib/TarotCardView';
+import { resolveGameToken, forceRefreshGameToken } from '../../../games/socketAuth';
 import VoiceCall from '../../../games/Voice';
 import Chat from '../../../games/Chat';
 import ChallengeLosers from '../../../games/ChallengeLosers';
@@ -26,19 +27,38 @@ export default function TarotRoom() {
   const [snap, setSnap] = useState<any>(null);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [authError, setAuthError] = useState(false);
   const [copied, setCopied] = useState(false);
   const socketRef = useRef<Socket | null>(null);
+  const tokenRef = useRef<string | null>(null);
 
-  useEffect(() => { setToken(typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null); }, []);
   useEffect(() => {
-    if (!token || !code) return;
-    const s = io(`${SOCKET_URL}/game`, { transports: ['websocket'], auth: { token } });
-    socketRef.current = s;
-    s.on('connect', () => { setConnected(true); s.emit('game:join', { roomCode: code, gameType: 'tarot' }); });
-    s.on('disconnect', () => setConnected(false));
-    s.on('game:state', (st: any) => setSnap(st));
-    return () => { s.disconnect(); socketRef.current = null; };
-  }, [token, code]);
+    if (!code) return;
+    let cancelled = false; let refreshing = false; let s: Socket | null = null;
+    (async () => {
+      const tok = await resolveGameToken();
+      if (cancelled) return;
+      if (!tok) { setAuthError(true); return; }
+      tokenRef.current = tok; setToken(tok);
+      s = io(`${SOCKET_URL}/game`, { transports: ['websocket'], auth: (cb: any) => cb({ token: tokenRef.current }) });
+      socketRef.current = s;
+      s.on('connect', () => { setConnected(true); setAuthError(false); s!.emit('game:join', { roomCode: code, gameType: 'tarot' }); });
+      s.on('disconnect', () => setConnected(false));
+      s.on('game:state', (st: any) => setSnap(st));
+      s.on('connect_error', async (err: any) => {
+        if (cancelled || refreshing) return;
+        if (/token|auth/i.test(String(err?.message || ''))) {
+          refreshing = true;
+          const fresh = await forceRefreshGameToken();
+          refreshing = false;
+          if (cancelled) return;
+          if (fresh) { tokenRef.current = fresh; setToken(fresh); }
+          else { setAuthError(true); s!.disconnect(); }
+        }
+      });
+    })();
+    return () => { cancelled = true; if (s) s.disconnect(); socketRef.current = null; };
+  }, [code]);
 
   const me = snap?.players.find((p: any) => p.id === snap.youId) || null;
   const myTurn = !!(snap && me && snap.currentId === me.id && snap.phase === 'playing');
@@ -63,6 +83,14 @@ export default function TarotRoom() {
           <button onClick={copyCode} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.08)', color: '#fff', border: `1px solid ${GOLD}55`, borderRadius: 999, padding: '6px 14px', cursor: 'pointer', fontWeight: 800, letterSpacing: 2 }}>{copied ? <Check style={{ width: 15, height: 15, color: '#4ADE80' }} /> : <Copy style={{ width: 15, height: 15, color: GOLD }} />} {code}</button>
           <span style={{ color: connected ? '#4ADE80' : '#FCA5A5', fontSize: '0.78rem', fontWeight: 700 }}>{connected ? '● connecté' : '○ connexion…'}</span>
         </div>
+
+        {authError && (
+          <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 12, padding: 16, marginBottom: 12, textAlign: 'center' }}>
+            <div style={{ color: '#fff', fontWeight: 800, marginBottom: 6 }}>Connecte-toi pour jouer en multijoueur</div>
+            <div style={{ color: BLUE, fontSize: '0.85rem', marginBottom: 10 }}>Ta session a expiré ou tu n’es pas connecté.</div>
+            <Link href="/auth/login" style={{ display: 'inline-block', background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: NAVY, fontWeight: 800, padding: '8px 20px', borderRadius: 10, textDecoration: 'none' }}>Se connecter</Link>
+          </div>
+        )}
 
         <div style={{ marginBottom: 12 }}><VoiceCall roomCode={`tarot-${code}`} token={token} /></div>
         <Chat roomId={`tarot-${code}`} token={token} />
