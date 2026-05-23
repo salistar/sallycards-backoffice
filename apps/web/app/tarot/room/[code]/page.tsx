@@ -14,6 +14,7 @@ import { ArrowLeft, RefreshCw, Copy, Check } from 'lucide-react';
 import { TCard, legalCards } from '../../lib/engine';
 import TarotCard from '../../lib/TarotCardView';
 import VoiceCall from '../../../games/Voice';
+import Chat from '../../../games/Chat';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
 const NAVY = '#0A1535'; const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#2a1145';
@@ -63,6 +64,7 @@ export default function TarotRoom() {
         </div>
 
         <div style={{ marginBottom: 12 }}><VoiceCall roomCode={`tarot-${code}`} token={token} /></div>
+        <Chat roomId={`tarot-${code}`} token={token} />
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ background: 'rgba(252,211,77,0.14)', border: `1px solid ${GOLD}55`, borderRadius: 12, padding: '8px 14px' }}>

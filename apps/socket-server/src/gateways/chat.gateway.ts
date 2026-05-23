@@ -60,6 +60,29 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.userMessageTimestamps.delete(client.userId);
   }
 
+  // ── chat:join / chat:leave ─────────────────────────────────────────────────
+  // Sans rejoindre la room socket.io, le client ne reçoit pas les messages
+  // diffusés via server.to(roomId). On expose donc join/leave explicites.
+
+  @SubscribeMessage('chat:join')
+  handleJoin(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { roomId: string },
+  ) {
+    if (!payload?.roomId) return { error: 'roomId required' };
+    client.join(payload.roomId);
+    return { ok: true };
+  }
+
+  @SubscribeMessage('chat:leave')
+  handleLeave(
+    @ConnectedSocket() client: AuthenticatedSocket,
+    @MessageBody() payload: { roomId: string },
+  ) {
+    if (payload?.roomId) client.leave(payload.roomId);
+    return { ok: true };
+  }
+
   // ── chat:message ──────────────────────────────────────────────────────────
 
   @SubscribeMessage('chat:message')

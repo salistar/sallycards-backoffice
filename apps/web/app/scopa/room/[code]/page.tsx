@@ -13,6 +13,7 @@ import { io, Socket } from 'socket.io-client';
 import { ArrowLeft, RefreshCw, Copy, Check } from 'lucide-react';
 import { cardImage, Card } from '../../lib/engine';
 import VoiceCall from '../../../games/Voice';
+import Chat from '../../../games/Chat';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
 const NAVY = '#0A1535'; const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
@@ -57,6 +58,7 @@ export default function ScopaRoom() {
         </div>
 
         <div style={{ marginBottom: 12 }}><VoiceCall roomCode={`scopa-${code}`} token={token} /></div>
+        <Chat roomId={`scopa-${code}`} token={token} />
 
         <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
           <Pill label={me?.name || 'Vous'} value={snap ? snap.scores[myIdx] : 0} accent={snap?.winner === myIdx} sub={me ? `${me.capturedCount} cartes${me.scope ? ` · 🧹×${me.scope}` : ''}` : ''} />
