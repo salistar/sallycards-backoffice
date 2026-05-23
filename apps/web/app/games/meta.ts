@@ -26,6 +26,20 @@ export const GAME_META: Record<string, GameMeta> = {
     accent: ['#EC4899', '#831843'],
     tagline: 'Tarot français · 78 cartes · bouts & atouts',
   },
+  okey: {
+    gameType: 'okey',
+    label: 'Okey',
+    emoji: '🀄',
+    accent: ['#06B6D4', '#0E7490'],
+    tagline: 'Rami turc · 106 tuiles · suites & brelans',
+  },
+  quiestce: {
+    gameType: 'quiestce',
+    label: 'Qui-est-ce ?',
+    emoji: '🕵️',
+    accent: ['#6366F1', '#312E81'],
+    tagline: 'Déduction · pose des questions · devine le personnage',
+  },
 };
 
 export function metaOf(gameType: string): GameMeta {

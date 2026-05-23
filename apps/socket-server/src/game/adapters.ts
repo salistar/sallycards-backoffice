@@ -8,6 +8,8 @@
 import * as Belote from './belote-engine';
 import * as Scopa from './scopa-engine';
 import * as Tarot from './tarot-engine';
+import * as Okey from './okey-engine';
+import * as Quiestce from './quiestce-engine';
 import { pickBots } from './bot-roster';
 
 export interface Human { userId: string; name: string }
@@ -80,10 +82,32 @@ const tarotAdapter: GameAdapter = {
   isOver: (s) => Tarot.tarotIsOver(s),
 };
 
+const okeyAdapter: GameAdapter = {
+  seatCount: 4, maxHumans: 4,
+  build: (humans) => Okey.buildOkey(seatsFor(humans, 4, 'okey')),
+  view: (s, you) => Okey.okeyView(s, you),
+  currentId: (s) => Okey.okeyCurrentId(s),
+  applyAction: (s, userId, a) => Okey.okeyApply(s, userId, a),
+  advance: (s) => Okey.okeyAdvance(s),
+  isOver: (s) => Okey.okeyIsOver(s),
+};
+
+const quiestceAdapter: GameAdapter = {
+  seatCount: 2, maxHumans: 2,
+  build: (humans) => Quiestce.buildQuiestce(seatsFor(humans, 2, 'quiestce')),
+  view: (s, you) => Quiestce.quiestceView(s, you),
+  currentId: (s) => Quiestce.quiestceCurrentId(s),
+  applyAction: (s, userId, a) => Quiestce.quiestceApply(s, userId, a),
+  advance: (s) => Quiestce.quiestceAdvance(s),
+  isOver: (s) => Quiestce.quiestceIsOver(s),
+};
+
 export const ADAPTERS: Record<string, GameAdapter> = {
   belote: beloteAdapter,
   scopa: scopaAdapter,
   tarot: tarotAdapter,
+  okey: okeyAdapter,
+  quiestce: quiestceAdapter,
 };
 
 export function getAdapter(gameType: string | undefined): GameAdapter {
