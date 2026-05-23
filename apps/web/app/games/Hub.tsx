@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { useAuth } from '../lib/auth-context';
 import { metaOf } from './meta';
 import {
-  LogIn, Bot, BookOpen, Gift, Users, Trophy, Medal, Inbox, Activity, LogOut, Plus, LogIn as Enter, Footprints,
+  LogIn, Bot, BookOpen, Gift, Users, Trophy, Medal, Inbox, Activity, LogOut, Plus, LogIn as Enter, Footprints, User as UserIcon,
 } from 'lucide-react';
 
 const NAVY = '#0A1535';
@@ -40,6 +40,8 @@ export function GameHub({ gameType }: { gameType: string }) {
     { key: 'tournaments', label: 'Tournois', sub: 'Daily / weekly', icon: Trophy, grad: ['#EAB308', '#B45309'], href: `${base}/tournaments` },
     { key: 'inbox', label: 'Boîte', sub: 'Notifications', icon: Inbox, grad: ['#A855F7', '#7C3AED'], href: `${base}/inbox` },
     { key: 'hkim', label: 'Défis & Mur', sub: 'Défis sport A→B + mur de partage', icon: Footprints, grad: ['#14B8A6', '#0F766E'], href: `${base}/hkim` },
+    { key: 'profile', label: 'Mon profil', sub: 'Stats, ELO, niveau, défis', icon: UserIcon, grad: ['#6366F1', '#4338CA'], href: `${base}/profile` },
+    { key: 'players', label: 'Trouver des joueurs', sub: 'En ligne · inviter à jouer', icon: Users, grad: ['#0EA5E9', '#0369A1'], href: `${base}/players` },
   ];
 
   if (!user) {
