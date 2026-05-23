@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { useAuth } from '../lib/auth-context';
 import { metaOf } from './meta';
 import {
-  LogIn, Bot, BookOpen, Gift, Users, Trophy, Medal, Inbox, Activity, LogOut, Plus, LogIn as Enter,
+  LogIn, Bot, BookOpen, Gift, Users, Trophy, Medal, Inbox, Activity, LogOut, Plus, LogIn as Enter, Footprints,
 } from 'lucide-react';
 
 const NAVY = '#0A1535';
@@ -40,6 +40,7 @@ export function GameHub({ gameType }: { gameType: string }) {
     { key: 'tournaments', label: 'Tournois', sub: 'Daily / weekly', icon: Trophy, grad: ['#EAB308', '#B45309'], href: `${base}/tournaments` },
     { key: 'inbox', label: 'Boîte', sub: 'Notifications', icon: Inbox, grad: ['#A855F7', '#7C3AED'], href: `${base}/inbox` },
     { key: 'challenges', label: 'Défis sport', sub: 'Marche / course A→B', icon: Activity, grad: ['#22C55E', '#16A34A'], href: `${base}/challenges` },
+    { key: 'hkim', label: 'HKIM · Mur', sub: 'Défis Départ→Arrivée + actualité', icon: Footprints, grad: ['#14B8A6', '#0F766E'], href: `${base}/hkim` },
   ];
 
   if (!user) {
