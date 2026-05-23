@@ -8,9 +8,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../lib/auth-context';
+import { apiClient } from '../lib/api';
 import {
-  LayoutDashboard, Users, Bell, Trophy, Gift, Activity, BarChart3, LogOut, Shield,
+  LayoutDashboard, Users, Bell, Trophy, Gift, Activity, BarChart3, LogOut, Shield, ShieldAlert,
 } from 'lucide-react';
 
 const NAVY = '#0A1535';
@@ -30,19 +32,34 @@ const NAV = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading, logout } = useAuth();
   const pathname = usePathname();
+  // Vérifie le rôle admin via un appel sonde (le serveur applique AdminGuard).
+  const [access, setAccess] = useState<'checking' | 'ok' | 'denied'>('checking');
+  useEffect(() => {
+    if (!user) return;
+    let on = true;
+    apiClient.apiGet('/admin/stats').then(() => on && setAccess('ok')).catch(() => on && setAccess('denied'));
+    return () => { on = false; };
+  }, [user]);
+
+  const gate = (icon: React.ReactNode, msg: string) => (
+    <main style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${NAVY}, #1E3A8A 60%, ${NAVY})`, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ textAlign: 'center', maxWidth: 460 }}>
+        {icon}
+        <p style={{ color: BLUE, margin: '12px 0 18px', lineHeight: 1.6 }}>{msg}</p>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button onClick={() => logout()} style={{ background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: NAVY, fontWeight: 900, padding: '12px 24px', borderRadius: 12, border: 'none', cursor: 'pointer' }}>Se déconnecter & changer de compte</button>
+          <Link href="/auth/login?game=belote" style={{ background: 'rgba(255,255,255,0.08)', color: '#fff', fontWeight: 700, padding: '12px 24px', borderRadius: 12, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.15)' }}>Page de connexion</Link>
+        </div>
+      </div>
+    </main>
+  );
 
   if (!isLoading && !user) {
-    return (
-      <main style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${NAVY}, #1E3A8A 60%, ${NAVY})`, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <div style={{ textAlign: 'center', maxWidth: 420 }}>
-          <Shield style={{ width: 40, height: 40, color: GOLD, margin: '0 auto 12px' }} />
-          <p style={{ color: BLUE, marginBottom: 18 }}>Espace admin — connecte-toi avec un compte administrateur.</p>
-          <Link href="/auth/login?game=belote" style={{ background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: NAVY, fontWeight: 900, padding: '12px 28px', borderRadius: 12, textDecoration: 'none' }}>Se connecter</Link>
-        </div>
-      </main>
-    );
+    return gate(<Shield style={{ width: 40, height: 40, color: GOLD, margin: '0 auto' }} />, 'Espace admin — connecte-toi avec un compte administrateur (admin@sallycards.com).');
   }
-
+  if (user && access === 'denied') {
+    return gate(<ShieldAlert style={{ width: 40, height: 40, color: '#FCA5A5', margin: '0 auto' }} />, `Ce compte (${(user as any)?.username || ''}) n'est pas administrateur. Connecte-toi avec admin@sallycards.com / Admin123456 pour accéder au tableau de bord.`);
+  }
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: `linear-gradient(160deg, ${NAVY}, #0c1c3a)` }}>
       <aside style={{ width: 232, background: '#0A1429', borderRight: '1px solid rgba(255,255,255,0.08)', padding: 18, display: 'flex', flexDirection: 'column', position: 'sticky', top: 0, height: '100vh' }}>
