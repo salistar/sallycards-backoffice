@@ -13,6 +13,7 @@ import * as Quiestce from './quiestce-engine';
 import * as Kdoub from './kdoub-engine';
 import * as Kantcopy from './kantcopy-engine';
 import * as Concentration from './concentration-engine';
+import * as Poker from './poker-engine';
 import { pickBots } from './bot-roster';
 
 export interface Human { userId: string; name: string }
@@ -135,6 +136,16 @@ const concentrationAdapter: GameAdapter = {
   isOver: (s) => Concentration.concentrationIsOver(s),
 };
 
+const pokerAdapter: GameAdapter = {
+  seatCount: 4, maxHumans: 4,
+  build: (humans) => Poker.buildPoker(seatsFor(humans, 4, 'poker')),
+  view: (s, you) => Poker.pokerView(s, you),
+  currentId: (s) => Poker.pokerCurrentId(s),
+  applyAction: (s, userId, a) => Poker.pokerApply(s, userId, a),
+  advance: (s) => Poker.pokerAdvance(s),
+  isOver: (s) => Poker.pokerIsOver(s),
+};
+
 export const ADAPTERS: Record<string, GameAdapter> = {
   belote: beloteAdapter,
   scopa: scopaAdapter,
@@ -144,6 +155,7 @@ export const ADAPTERS: Record<string, GameAdapter> = {
   kdoub: kdoubAdapter,
   kantcopy: kantcopyAdapter,
   concentration: concentrationAdapter,
+  poker: pokerAdapter,
 };
 
 export function getAdapter(gameType: string | undefined): GameAdapter {
