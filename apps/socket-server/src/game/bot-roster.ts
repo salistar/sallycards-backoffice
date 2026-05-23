@@ -9,6 +9,7 @@ export const BOT_ROSTERS: Record<string, string[]> = {
   tarot: ['Henri', 'Claire', 'Julien', 'Nadia', 'Thomas', 'Inès', 'Rachid', 'Yasmine', 'Omar', 'Salma', 'Karim', 'Fatima'],
   okey: ['Mehmet', 'Ayşe', 'Mustafa', 'Zeynep', 'Emre', 'Elif', 'Burak', 'Deniz', 'Cem', 'Selin', 'Kerem', 'Derya'],
   quiestce: ['Léon', 'Alice', 'Victor', 'Rose', 'Gaspard', 'Jeanne', 'Théo', 'Manon', 'Noé', 'Lina', 'Sacha', 'Zoé'],
+  kdoub: ['Hamza', 'Fatima', 'Youssef', 'Amina', 'Omar', 'Khadija', 'Mehdi', 'Salma', 'Rachid', 'Nadia', 'Karim', 'Houda'],
 };
 
 export function pickBots(gameType: string, n: number): string[] {
