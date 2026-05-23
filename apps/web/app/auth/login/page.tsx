@@ -86,6 +86,13 @@ export default function LoginPage() {
   const fillDemo = () => {
     setEmail('demo@sallycards.com');
     setPassword('Demo123456');
+    setRole('player');
+  };
+
+  const fillAdmin = () => {
+    setEmail('admin@sallycards.com');
+    setPassword('Admin123456');
+    setRole('admin');
   };
 
   return (
@@ -100,29 +107,37 @@ export default function LoginPage() {
         </p>
       </div>
 
-      {/* Demo box */}
-      <button
-        onClick={fillDemo}
-        type="button"
-        style={{
-          width: '100%',
-          padding: '1.25rem 1.5rem',
-          borderRadius: '0.75rem',
-          backgroundColor: 'rgba(252,211,77,0.08)',
-          border: '2px solid rgba(252,211,77,0.3)',
-          cursor: 'pointer',
-          textAlign: 'left' as const,
-          marginBottom: '2rem',
-        }}
-      >
-        <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#FCD34D', marginBottom: '0.5rem' }}>
-          {t('auth.demoAccount')}
-        </div>
-        <div style={{ display: 'flex', gap: '1.5rem', fontSize: '0.875rem', fontFamily: 'monospace', color: '#93C5FD' }}>
-          <span>Email: <span style={{ color: '#fff', fontWeight: 600 }}>demo@sallycards.com</span></span>
-          <span>Pass: <span style={{ color: '#fff', fontWeight: 600 }}>Demo123456</span></span>
-        </div>
-      </button>
+      {/* Comptes de démonstration : clique pour remplir */}
+      <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+        {/* Démo (joueur) */}
+        <button
+          onClick={fillDemo}
+          type="button"
+          style={{ flex: 1, minWidth: 200, padding: '1rem 1.1rem', borderRadius: '0.75rem', backgroundColor: 'rgba(252,211,77,0.08)', border: '2px solid rgba(252,211,77,0.3)', cursor: 'pointer', textAlign: 'left' as const }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: '#FCD34D', marginBottom: '0.5rem' }}>
+            <UserIcon style={{ width: '0.9rem', height: '0.9rem' }} /> Compte joueur (démo)
+          </div>
+          <div style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#93C5FD', lineHeight: 1.5 }}>
+            <div>demo@sallycards.com</div>
+            <div style={{ color: '#fff', fontWeight: 600 }}>Demo123456</div>
+          </div>
+        </button>
+        {/* Admin */}
+        <button
+          onClick={fillAdmin}
+          type="button"
+          style={{ flex: 1, minWidth: 200, padding: '1rem 1.1rem', borderRadius: '0.75rem', backgroundColor: 'rgba(99,102,241,0.10)', border: '2px solid rgba(99,102,241,0.45)', cursor: 'pointer', textAlign: 'left' as const }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: '#A5B4FC', marginBottom: '0.5rem' }}>
+            <Shield style={{ width: '0.9rem', height: '0.9rem' }} /> Compte administrateur
+          </div>
+          <div style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#93C5FD', lineHeight: 1.5 }}>
+            <div>admin@sallycards.com</div>
+            <div style={{ color: '#fff', fontWeight: 600 }}>Admin123456</div>
+          </div>
+        </button>
+      </div>
 
       {/* Error */}
       {error && (
