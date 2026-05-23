@@ -133,29 +133,42 @@ export class AdminService {
     });
   }
 
-  /** Stats détaillées : joueurs jour/semaine/mois + ressources. */
+  /** Stats détaillées : joueurs jour/semaine/mois, par jeu, parties, contenus, ressources. */
   async getOverview() {
     const now = Date.now();
     const dayMs = 24 * 3600 * 1000;
     const since = new Date(now - 30 * dayMs);
     const byDay: Record<string, number> = {};
-    let total = 0, online = 0;
+    let total = 0, online = 0, totalGamesPlayed = 0, totalGamesWon = 0;
+    const perGame: { gameType: string; users: number; online: number; gamesPlayed: number }[] = [];
     for (const gt of this.GAME_TYPES) {
       const col = this.connection.collection(`${gt}_users`);
-      total += await col.countDocuments({});
-      online += await col.countDocuments({ status: 'online' });
+      const users = await col.countDocuments({});
+      const onlineG = await col.countDocuments({ status: 'online' });
+      const gpAgg = await col.aggregate([{ $group: { _id: null, gp: { $sum: '$stats.gamesPlayed' }, gw: { $sum: '$stats.gamesWon' } } }]).toArray();
+      const gp = (gpAgg[0] as any)?.gp || 0; const gw = (gpAgg[0] as any)?.gw || 0;
+      total += users; online += onlineG; totalGamesPlayed += gp; totalGamesWon += gw;
+      perGame.push({ gameType: gt, users, online: onlineG, gamesPlayed: gp });
       const agg = await col.aggregate([
         { $match: { createdAt: { $gte: since } } },
         { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, n: { $sum: 1 } } },
       ]).toArray();
       for (const a of agg) byDay[a._id] = (byDay[a._id] || 0) + a.n;
     }
+    perGame.sort((a, b) => b.users - a.users);
     const days = Object.entries(byDay).map(([date, count]) => ({ date, count })).sort((a, b) => a.date.localeCompare(b.date));
     const sum = (n: number) => days.filter((d) => new Date(d.date).getTime() >= now - n * dayMs).reduce((s, d) => s + d.count, 0);
+    const tournaments = await this.connection.collection('tournaments').countDocuments({});
+    const openTournaments = await this.connection.collection('tournaments').countDocuments({ status: 'open' });
+    const vouchers = await this.connection.collection('rewards-vouchers').countDocuments({});
+    const posts = await this.connection.collection('wall_posts').countDocuments({});
+    const notifs = await this.connection.collection('notifications').countDocuments({});
     return {
       totalUsers: total, onlineUsers: online,
       newToday: sum(1), newThisWeek: sum(7), newThisMonth: sum(30),
-      daily: days,
+      totalGamesPlayed, totalGamesWon,
+      tournaments, openTournaments, vouchers, posts, notifs,
+      perGame, daily: days,
       resources: { uptimePct: 99.9, note: 'Heartbeats infra via /infra-monitoring' },
     };
   }
