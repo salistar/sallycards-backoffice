@@ -8,9 +8,12 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { getVariant } from '../../lib/registry';
+import { getVariant, spiderSuits } from '../../lib/registry';
 import TableauBoard from '../../lib/TableauBoard';
 import PairsBoard from '../../lib/PairsBoard';
+import SpiderBoard from '../../lib/SpiderBoard';
+import ClockBoard from '../../lib/ClockBoard';
+import MazeBoard from '../../lib/MazeBoard';
 
 const NAVY = '#0A1535'; const BLUE = '#93C5FD';
 
@@ -27,6 +30,12 @@ export default function PlayVariant() {
           <div style={{ color: '#fff', textAlign: 'center', padding: 40 }}>Variante inconnue. <Link href="/solitaire" style={{ color: BLUE }}>Retour</Link></div>
         ) : info.family === 'pairs' ? (
           <PairsBoard variantKey={info.key} label={info.label} />
+        ) : info.family === 'spider' ? (
+          <SpiderBoard suitMode={spiderSuits(info.key)} label={info.label} />
+        ) : info.family === 'dist' ? (
+          <ClockBoard variantKey={info.key} label={info.label} />
+        ) : info.family === 'maze' ? (
+          <MazeBoard variantKey={info.key} label={info.label} />
         ) : (
           <TableauBoard variantKey={info.key} label={info.label} />
         )}
