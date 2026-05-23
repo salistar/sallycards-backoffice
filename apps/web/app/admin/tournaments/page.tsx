@@ -5,9 +5,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy, Download, Lock, Trash2 } from 'lucide-react';
 import { apiClient } from '../../lib/api';
-import { AdminCard, Btn, Field, inputStyle, Flash, ALL_GAMES, GOLD, BLUE, card } from '../_ui';
+import { AdminCard, Btn, Field, inputStyle, Flash, ALL_GAMES, GOLD, BLUE, card, downloadCSV } from '../_ui';
 
 const ST: Record<string, { bg: string; fg: string }> = {
   open: { bg: 'rgba(34,197,94,0.15)', fg: '#4ADE80' },
@@ -44,6 +44,9 @@ export default function AdminTournaments() {
     } catch (e: any) { setFlash(e?.message || 'Échec (accès admin requis)'); } finally { setBusy(false); }
   };
 
+  const close = async (code: string) => { try { await apiClient.apiPatch(`/admin/tournaments/${code}`, { status: 'closed' }); setFlash(`Tournoi ${code} clôturé.`); await load(); } catch (e: any) { setFlash(e?.message || 'Échec'); } };
+  const del = async (code: string) => { if (!confirm(`Supprimer le tournoi ${code} ?`)) return; try { await apiClient.apiDelete(`/admin/tournaments/${code}`); setFlash(`Tournoi ${code} supprimé.`); await load(); } catch (e: any) { setFlash(e?.message || 'Échec'); } };
+
   return (
     <div style={{ maxWidth: 760 }}>
       <h1 style={{ color: '#fff', fontSize: '1.6rem', fontWeight: 900, marginBottom: 18 }}>Tournois</h1>
@@ -63,7 +66,7 @@ export default function AdminTournaments() {
       </AdminCard>
 
       <div style={{ height: 18 }} />
-      <AdminCard title={`Tous les tournois (${list.length})`}>
+      <AdminCard title={`Tous les tournois (${list.length})`} right={<Btn kind="ghost" onClick={() => downloadCSV('tournois.csv', list)}><Download style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />CSV</Btn>}>
         <div style={{ display: 'grid', gap: 8 }}>
           {list.length === 0 && <span style={{ color: '#64748B', fontSize: '0.85rem' }}>Aucun tournoi.</span>}
           {list.map((t) => {
@@ -74,7 +77,11 @@ export default function AdminTournaments() {
                   <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.88rem' }}><span style={{ textTransform: 'capitalize' }}>{t.variant}</span> · {t.type} <code style={{ color: '#64748B', fontSize: '0.72rem' }}>{t.code}</code></div>
                   <div style={{ color: BLUE, fontSize: '0.76rem' }}>{t.participants} participants · {(t.prizes || []).map((p: any) => `#${p.rank}:${p.gold}g`).join(' ')}</div>
                 </div>
-                <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: 999, background: st.bg, color: st.fg }}>{t.status}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: 999, background: st.bg, color: st.fg }}>{t.status}</span>
+                  {t.status !== 'closed' && <button onClick={() => close(t.code)} title="Clôturer" style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: 7, color: '#FCD34D', cursor: 'pointer' }}><Lock style={{ width: 15, height: 15 }} /></button>}
+                  <button onClick={() => del(t.code)} title="Supprimer" style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: 7, color: '#FCA5A5', cursor: 'pointer' }}><Trash2 style={{ width: 15, height: 15 }} /></button>
+                </div>
               </div>
             );
           })}

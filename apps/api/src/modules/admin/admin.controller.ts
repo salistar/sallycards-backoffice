@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UseGuards,
   HttpCode,
   HttpStatus,
@@ -72,8 +73,10 @@ export class AdminController {
 
   @Post('notifications/broadcast')
   @ApiOperation({ summary: 'Créer et envoyer une notification aux utilisateurs' })
-  async broadcast(@Body() dto: { gameType?: string; type?: string; title: string; body: string }) {
-    return this.adminService.broadcastNotification(dto);
+  async broadcast(@Body() dto: { gameType?: string; type?: string; title: string; body: string }, @Req() req: any) {
+    const r = await this.adminService.broadcastNotification(dto);
+    await this.adminService.audit('notification.broadcast', req.user?.userId, { gameType: dto.gameType, title: dto.title });
+    return r;
   }
 
   @Get('notifications/recent')
@@ -90,14 +93,18 @@ export class AdminController {
 
   @Post('tournaments')
   @ApiOperation({ summary: 'Créer un tournoi' })
-  async createTournament(@Body() dto: any) {
-    return this.adminService.createTournament(dto);
+  async createTournament(@Body() dto: any, @Req() req: any) {
+    const r = await this.adminService.createTournament(dto);
+    await this.adminService.audit('tournament.create', req.user?.userId, { gameType: dto.gameType, type: dto.type });
+    return r;
   }
 
   @Post('gifts')
   @ApiOperation({ summary: 'Créer et envoyer un cadeau (bon) avec condition' })
-  async createGift(@Body() dto: any) {
-    return this.adminService.createGift(dto);
+  async createGift(@Body() dto: any, @Req() req: any) {
+    const r = await this.adminService.createGift(dto);
+    await this.adminService.audit('gift.create', req.user?.userId, { gameType: dto.gameType, amount: dto.amount });
+    return r;
   }
 
   @Get('activity')
@@ -116,5 +123,60 @@ export class AdminController {
   @ApiOperation({ summary: 'Métriques réelles serveur (CPU/RAM/disque) + base de données' })
   async metrics() {
     return this.adminService.getMetrics();
+  }
+
+  // ── Édition / clôture de tournoi ───────────────────────────────────────────
+  @Patch('tournaments/:code')
+  @ApiOperation({ summary: 'Modifier / clôturer un tournoi' })
+  async updateTournament(@Param('code') code: string, @Body() dto: any, @Req() req: any) {
+    const r = await this.adminService.updateTournament(code, dto);
+    await this.adminService.audit('tournament.update', req.user?.userId, { code, ...dto });
+    return r;
+  }
+
+  @Delete('tournaments/:code')
+  @ApiOperation({ summary: 'Supprimer un tournoi' })
+  async deleteTournament(@Param('code') code: string, @Req() req: any) {
+    const r = await this.adminService.deleteTournament(code);
+    await this.adminService.audit('tournament.delete', req.user?.userId, { code });
+    return r;
+  }
+
+  // ── Modération du mur ──────────────────────────────────────────────────────
+  @Get('wall')
+  @ApiOperation({ summary: 'Lister les posts du mur (modération)' })
+  async listWall(@Query('gameType') gameType?: string) {
+    return this.adminService.listWall(gameType);
+  }
+
+  @Delete('wall/:id')
+  @ApiOperation({ summary: 'Supprimer un post du mur' })
+  async deletePost(@Param('id') id: string, @Req() req: any) {
+    const r = await this.adminService.deletePost(id);
+    await this.adminService.audit('wall.delete', req.user?.userId, { id });
+    return r;
+  }
+
+  @Post('ban')
+  @ApiOperation({ summary: 'Bannir un utilisateur (ne peut plus poster)' })
+  async ban(@Body() dto: { userId: string }, @Req() req: any) {
+    const r = await this.adminService.banUser(dto.userId);
+    await this.adminService.audit('user.ban', req.user?.userId, { userId: dto.userId });
+    return r;
+  }
+
+  @Post('unban')
+  @ApiOperation({ summary: 'Lever le bannissement' })
+  async unban(@Body() dto: { userId: string }, @Req() req: any) {
+    const r = await this.adminService.unbanUser(dto.userId);
+    await this.adminService.audit('user.unban', req.user?.userId, { userId: dto.userId });
+    return r;
+  }
+
+  // ── Journal d'audit ────────────────────────────────────────────────────────
+  @Get('audit')
+  @ApiOperation({ summary: 'Journal des actions admin' })
+  async listAudit() {
+    return this.adminService.listAudit();
   }
 }

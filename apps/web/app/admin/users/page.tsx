@@ -5,9 +5,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Pencil, Trash2, Search, Download } from 'lucide-react';
 import { apiClient } from '../../lib/api';
-import { AdminCard, Btn, Field, inputStyle, Flash, ALL_GAMES, GOLD, BLUE, CARD } from '../_ui';
+import { AdminCard, Btn, Field, inputStyle, Flash, ALL_GAMES, GOLD, BLUE, CARD, downloadCSV } from '../_ui';
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<any[]>([]);
@@ -32,7 +32,10 @@ export default function AdminUsers() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, gap: 10, flexWrap: 'wrap' }}>
         <h1 style={{ color: '#fff', fontSize: '1.6rem', fontWeight: 900, margin: 0 }}>Utilisateurs</h1>
-        <Btn onClick={() => { setCreating(true); setEditing({ username: '', email: '', password: '', role: 'player', gameType }); }}><Plus style={{ width: 15, height: 15, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Ajouter</Btn>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Btn kind="ghost" onClick={() => downloadCSV(`users-${gameType}.csv`, users.map((u) => ({ username: u.username, email: u.email, role: u.role || 'player', elo: u.stats?.elo ?? 1000, gamesPlayed: u.stats?.gamesPlayed ?? 0, status: u.status })))}><Download style={{ width: 14, height: 14, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />CSV</Btn>
+          <Btn onClick={() => { setCreating(true); setEditing({ username: '', email: '', password: '', role: 'player', gameType }); }}><Plus style={{ width: 15, height: 15, display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />Ajouter</Btn>
+        </div>
       </div>
       <Flash text={flash} />
 

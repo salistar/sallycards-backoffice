@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../lib/auth-context';
 import { apiClient } from '../lib/api';
 import {
-  LayoutDashboard, Users, Bell, Trophy, Gift, Activity, BarChart3, LogOut, Shield, ShieldAlert,
+  LayoutDashboard, Users, Bell, Trophy, Gift, Activity, BarChart3, LogOut, Shield, ShieldAlert, MessageSquare, ScrollText,
 } from 'lucide-react';
 
 const NAVY = '#0A1535';
@@ -26,7 +26,9 @@ const NAV = [
   { href: '/admin/tournaments', label: 'Tournois', icon: Trophy },
   { href: '/admin/gifts', label: 'Cadeaux', icon: Gift },
   { href: '/admin/activity', label: 'Activité', icon: Activity },
+  { href: '/admin/moderation', label: 'Modération', icon: MessageSquare },
   { href: '/admin/stats', label: 'Statistiques', icon: BarChart3 },
+  { href: '/admin/audit', label: 'Journal d\'audit', icon: ScrollText },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -53,8 +53,33 @@ function Row({ k, v }: { k: string; v: any }) {
   return <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>{k}</span><strong style={{ color: '#fff' }}>{v ?? '—'}</strong></div>;
 }
 
+/** Barres empilées : chaque jour = barre segmentée par jeu. */
+function StackedBars({ data, games, filter }: { data: any[]; games: string[]; filter: string }) {
+  const series = filter === 'all' ? games : [filter];
+  const totalOf = (d: any) => series.reduce((s, g) => s + (d.games?.[g] || 0), 0);
+  const max = Math.max(1, ...data.map(totalOf));
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120, overflowX: 'auto' }}>
+        {data.length === 0 && <span style={{ color: '#64748B', fontSize: '0.8rem' }}>Pas de données</span>}
+        {data.map((d) => (
+          <div key={d.date} title={`${d.date}: ${totalOf(d)}`} style={{ flex: '1 0 8px', minWidth: 8, height: `${Math.round((totalOf(d) / max) * 100)}%`, display: 'flex', flexDirection: 'column-reverse', borderRadius: '4px 4px 0 0', overflow: 'hidden' }}>
+            {series.map((g, i) => { const v = d.games?.[g] || 0; const t = totalOf(d) || 1; return v ? <div key={g} style={{ height: `${(v / t) * 100}%`, background: PIE_COLORS[games.indexOf(g) % PIE_COLORS.length] }} /> : null; })}
+          </div>
+        ))}
+      </div>
+      {filter === 'all' && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+          {games.map((g) => <span key={g} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.7rem', color: '#94A3B8' }}><span style={{ width: 9, height: 9, borderRadius: 2, background: PIE_COLORS[games.indexOf(g) % PIE_COLORS.length] }} />{g}</span>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [days, setDays] = useState(30);
+  const [gameFilter, setGameFilter] = useState('all');
   const [o, setO] = useState<any>(null);
   const [m, setM] = useState<any>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -62,7 +87,13 @@ export default function AdminDashboard() {
   useEffect(() => {
     apiClient.apiGet<any>(`/admin/stats/overview?days=${days}`).then(setO).catch((e: any) => setErr(e?.message || 'Accès admin requis'));
   }, [days]);
-  useEffect(() => { apiClient.apiGet<any>('/admin/metrics').then(setM).catch(() => {}); }, []);
+  // Auto-refresh des métriques toutes les 10 s (live)
+  useEffect(() => {
+    const fetchM = () => apiClient.apiGet<any>('/admin/metrics').then(setM).catch(() => {});
+    fetchM();
+    const id = setInterval(fetchM, 10000);
+    return () => clearInterval(id);
+  }, []);
 
   const pg = o?.perGame || [];
   const srv = m?.server; const db = m?.db;
@@ -96,7 +127,14 @@ export default function AdminDashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <AdminCard title={`Inscriptions / jour (${days}j)`}><Bars data={o?.daily || []} /></AdminCard>
-        <AdminCard title={`Parties / jour (${days}j)`}><Bars data={o?.dailyGames || []} /></AdminCard>
+        <AdminCard title={`Parties / jour par jeu (${days}j)`} right={
+          <select value={gameFilter} onChange={(e) => setGameFilter(e.target.value)} style={{ background: '#0F2238', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8, padding: '5px 8px', color: '#fff', fontSize: '0.78rem' }}>
+            <option value="all" style={{ color: '#000' }}>Tous</option>
+            {(o?.gameTypesInGames || []).map((g: string) => <option key={g} value={g} style={{ color: '#000' }}>{g}</option>)}
+          </select>
+        }>
+          <StackedBars data={o?.dailyGamesByGame || []} games={o?.gameTypesInGames || []} filter={gameFilter} />
+        </AdminCard>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -115,7 +153,7 @@ export default function AdminDashboard() {
         </AdminCard>
       </div>
 
-      <AdminCard title="Ressources serveur & base de données (temps réel)">
+      <AdminCard title="Ressources serveur & base de données" right={<span style={{ color: '#4ADE80', fontSize: '0.72rem', fontWeight: 700 }}>● live (10s)</span>}>
         {!m && <span style={{ color: '#64748B', fontSize: '0.85rem' }}>Chargement des métriques…</span>}
         {srv && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
