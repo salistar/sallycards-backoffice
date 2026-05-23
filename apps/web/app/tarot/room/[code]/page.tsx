@@ -15,6 +15,7 @@ import { TCard, legalCards } from '../../lib/engine';
 import TarotCard from '../../lib/TarotCardView';
 import VoiceCall from '../../../games/Voice';
 import Chat from '../../../games/Chat';
+import ChallengeLosers from '../../../games/ChallengeLosers';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
 const NAVY = '#0A1535'; const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#2a1145';
@@ -115,6 +116,14 @@ export default function TarotRoom() {
             <h2 style={{ color: '#fff', fontWeight: 900, fontSize: '1.4rem', margin: '8px 0' }}>{snap.result.takerWins ? 'Contrat réussi (preneur)' : 'Contrat chuté (défense gagne)'}</h2>
             <p style={{ color: BLUE, marginBottom: 16 }}>{snap.result.takerPoints} pts / {snap.result.target} requis · {snap.result.bouts} bout(s)</p>
             <button onClick={rematch} style={{ background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: NAVY, fontWeight: 900, border: 'none', borderRadius: 12, padding: '12px 28px', cursor: 'pointer' }}><RefreshCw style={{ width: 16, height: 16, display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />Nouvelle donne</button>
+            {(() => {
+              const iWon = snap.result.takerWins ? iAmTaker : !iAmTaker;
+              if (!iWon) return null;
+              const loserIds = iAmTaker
+                ? snap.players.filter((p: any, i: number) => i !== 0 && !p.isBot).map((p: any) => p.id)
+                : (snap.players[0] && !snap.players[0].isBot ? [snap.players[0].id] : []);
+              return <ChallengeLosers gameType="tarot" loserIds={loserIds} />;
+            })()}
           </div>
         )}
       </div>

@@ -19,6 +19,7 @@ import {
 } from '../../lib/engine';
 import VoiceCall from '../_voice';
 import Chat from '../../../games/Chat';
+import ChallengeLosers from '../../../games/ChallengeLosers';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
 const NAVY = '#0A1535';
@@ -200,6 +201,9 @@ export default function RoomTable() {
             <button onClick={rematch} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: NAVY, fontWeight: 900, border: 'none', borderRadius: 12, padding: '12px 28px', cursor: 'pointer' }}>
               <RefreshCw style={{ width: 18, height: 18 }} /> Revanche
             </button>
+            {snap.winnerId === `team-${myTeam}` && (
+              <ChallengeLosers gameType="belote" loserIds={snap.players.filter((p) => p.team !== myTeam && !p.isBot).map((p) => p.id)} />
+            )}
           </div>
         )}
       </div>
