@@ -13,9 +13,19 @@ const KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 export interface Pt { lat: number; lng: number; label?: string }
 
-/** Image statique d'un parcours A→B (pas de JS, fiable). */
+/** Bandeau de repli quand la carte Google n'est pas disponible. */
+function RouteFallback({ a, b, height }: { a: Pt; b: Pt; height: number }) {
+  return (
+    <div style={{ height, borderRadius: 10, background: 'linear-gradient(135deg, #0E5A36, #093d24)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#fff', fontWeight: 700, fontSize: '0.82rem' }}>
+      🟢 {a.label || 'Départ'} <span style={{ color: '#FCD34D' }}>→</span> 🔴 {b.label || 'Arrivée'}
+    </div>
+  );
+}
+
+/** Image statique d'un parcours A→B (repli propre si l'API Static Maps n'est pas activée). */
 export function StaticRouteMap({ a, b, polyline, height = 150 }: { a: Pt; b: Pt; polyline?: string; height?: number }) {
-  if (!KEY) return null;
+  const [failed, setFailed] = useState(false);
+  if (!KEY || failed) return <RouteFallback a={a} b={b} height={height} />;
   const path = polyline
     ? `path=color:0xFCD34Dff|weight:4|enc:${polyline}`
     : `path=color:0xFCD34Dff|weight:4|${a.lat},${a.lng}|${b.lat},${b.lng}`;
@@ -24,7 +34,7 @@ export function StaticRouteMap({ a, b, polyline, height = 150 }: { a: Pt; b: Pt;
     + `&markers=color:red|label:B|${b.lat},${b.lng}`
     + `&${path}&key=${KEY}`;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={url} alt="Parcours Départ → Arrivée" style={{ width: '100%', height, objectFit: 'cover', borderRadius: 10, display: 'block' }} />;
+  return <img src={url} alt="Parcours Départ → Arrivée" onError={() => setFailed(true)} style={{ width: '100%', height, objectFit: 'cover', borderRadius: 10, display: 'block' }} />;
 }
 
 let mapsPromise: Promise<void> | null = null;
