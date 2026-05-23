@@ -6,12 +6,14 @@
  */
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import { ArrowLeft, RefreshCw, Copy, Check } from 'lucide-react';
-import { Tile, tileLabel, COLOR_HEX } from '../../lib/engine';
+import { Tile, tileLabel, tileImage } from '../../lib/engine';
+import { resolveGameToken, forceRefreshGameToken } from '../../../games/socketAuth';
 import VoiceCall from '../../../games/Voice';
 import Chat from '../../../games/Chat';
 import ChallengeLosers from '../../../games/ChallengeLosers';
@@ -25,19 +27,38 @@ export default function OkeyRoom() {
   const [snap, setSnap] = useState<any>(null);
   const [connected, setConnected] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [authError, setAuthError] = useState(false);
   const [copied, setCopied] = useState(false);
   const socketRef = useRef<Socket | null>(null);
+  const tokenRef = useRef<string | null>(null);
 
-  useEffect(() => { setToken(typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null); }, []);
   useEffect(() => {
-    if (!token || !code) return;
-    const s = io(`${SOCKET_URL}/game`, { transports: ['websocket'], auth: { token } });
-    socketRef.current = s;
-    s.on('connect', () => { setConnected(true); s.emit('game:join', { roomCode: code, gameType: 'okey' }); });
-    s.on('disconnect', () => setConnected(false));
-    s.on('game:state', (st: any) => setSnap(st));
-    return () => { s.disconnect(); socketRef.current = null; };
-  }, [token, code]);
+    if (!code) return;
+    let cancelled = false; let refreshing = false; let s: Socket | null = null;
+    (async () => {
+      const tok = await resolveGameToken();
+      if (cancelled) return;
+      if (!tok) { setAuthError(true); return; }
+      tokenRef.current = tok; setToken(tok);
+      s = io(`${SOCKET_URL}/game`, { transports: ['websocket'], auth: (cb: any) => cb({ token: tokenRef.current }) });
+      socketRef.current = s;
+      s.on('connect', () => { setConnected(true); setAuthError(false); s!.emit('game:join', { roomCode: code, gameType: 'okey' }); });
+      s.on('disconnect', () => setConnected(false));
+      s.on('game:state', (st: any) => setSnap(st));
+      s.on('connect_error', async (err: any) => {
+        if (cancelled || refreshing) return;
+        if (/token|auth/i.test(String(err?.message || ''))) {
+          refreshing = true;
+          const fresh = await forceRefreshGameToken();
+          refreshing = false;
+          if (cancelled) return;
+          if (fresh) { tokenRef.current = fresh; setToken(fresh); } // la reconnexion auto reprend le nouveau token
+          else { setAuthError(true); s!.disconnect(); }
+        }
+      });
+    })();
+    return () => { cancelled = true; if (s) s.disconnect(); socketRef.current = null; };
+  }, [code]);
 
   const me = snap?.players.find((p: any) => p.id === snap.youId) || null;
   const myIdx = snap && me ? snap.players.indexOf(me) : -1;
@@ -59,6 +80,14 @@ export default function OkeyRoom() {
           <span style={{ color: connected ? '#4ADE80' : '#FCA5A5', fontSize: '0.78rem', fontWeight: 700 }}>{connected ? '● connecté' : '○ connexion…'}</span>
         </div>
 
+        {authError && (
+          <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 12, padding: 16, marginBottom: 12, textAlign: 'center' }}>
+            <div style={{ color: '#fff', fontWeight: 800, marginBottom: 6 }}>Connecte-toi pour jouer en multijoueur</div>
+            <div style={{ color: BLUE, fontSize: '0.85rem', marginBottom: 10 }}>Ta session a expiré ou tu n’es pas connecté.</div>
+            <Link href="/auth/login" style={{ display: 'inline-block', background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: NAVY, fontWeight: 800, padding: '8px 20px', borderRadius: 10, textDecoration: 'none' }}>Se connecter</Link>
+          </div>
+        )}
+
         <div style={{ marginBottom: 12 }}><VoiceCall roomCode={`okey-${code}`} token={token} /></div>
         <Chat roomId={`okey-${code}`} token={token} />
 
@@ -77,7 +106,7 @@ export default function OkeyRoom() {
           {snap && (
             <>
               <div style={{ textAlign: 'center' }}>
-                <button onClick={() => act({ type: 'DRAW', from: 'pile' })} disabled={!(myTurn && snap.phase === 'draw')} style={{ width: 54, height: 74, borderRadius: 10, background: 'linear-gradient(135deg,#1f2937,#374151)', border: `2px solid ${myTurn && snap.phase === 'draw' ? GOLD : '#4b5563'}`, color: '#fff', cursor: myTurn && snap.phase === 'draw' ? 'pointer' : 'default', fontWeight: 800 }}>🀫</button>
+                <button onClick={() => act({ type: 'DRAW', from: 'pile' })} disabled={!(myTurn && snap.phase === 'draw')} style={{ width: 54, height: 74, borderRadius: 10, padding: 0, overflow: 'hidden', background: '#fff', border: `2px solid ${myTurn && snap.phase === 'draw' ? GOLD : '#4b5563'}`, cursor: myTurn && snap.phase === 'draw' ? 'pointer' : 'default' }}><Image src="/cards/french52/back.png" alt="pioche" width={54} height={74} style={{ display: 'block', width: 54, height: 74, objectFit: 'cover' }} /></button>
                 <div style={{ color: BLUE, fontSize: '0.7rem', marginTop: 4 }}>Pioche ({snap.drawCount})</div>
               </div>
               <div style={{ textAlign: 'center' }}>
@@ -118,11 +147,12 @@ export default function OkeyRoom() {
 }
 
 function TileView({ t, onClick, interactive }: { t: Tile; onClick?: () => void; interactive?: boolean }) {
-  const bg = t.joker ? 'linear-gradient(135deg,#FCD34D,#F59E0B)' : '#fff';
-  const col = t.joker ? '#5b3a1a' : COLOR_HEX[t.color!];
+  const w = 48, h = 67;
   return (
-    <button onClick={onClick} disabled={!interactive} style={{ width: 46, height: 64, borderRadius: 8, background: bg, border: interactive ? `2px solid ${GOLD}` : '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: interactive ? 'pointer' : 'default', boxShadow: '0 3px 8px rgba(0,0,0,0.4)', padding: 0 }}>
-      <span style={{ color: col, fontWeight: 900, fontSize: t.joker ? 24 : 20 }}>{tileLabel(t)}</span>
+    <button onClick={onClick} disabled={!interactive} style={{ width: w, height: h, borderRadius: 8, background: '#fff', border: interactive ? `2px solid ${GOLD}` : '1px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: interactive ? 'pointer' : 'default', boxShadow: '0 3px 8px rgba(0,0,0,0.4)', padding: 0, overflow: 'hidden' }}>
+      {t.joker
+        ? <span style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#FCD34D,#F59E0B)', color: '#5b3a1a', fontWeight: 900, fontSize: 26 }}>★</span>
+        : <Image src={tileImage(t)} alt={tileLabel(t)} width={w} height={h} style={{ display: 'block', width: w, height: h, objectFit: 'cover' }} />}
     </button>
   );
 }
