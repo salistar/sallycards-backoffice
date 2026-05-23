@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { useAuth } from '../lib/auth-context';
 import {
   LogIn, Plus, LogIn as Enter, Bot, BookOpen, Gift, Users, Trophy,
-  Medal, Inbox, Activity, LogOut,
+  Medal, Inbox, Activity, LogOut, Footprints,
 } from 'lucide-react';
 
 const NAVY = '#0A1535';
@@ -41,6 +41,7 @@ const MENU: MenuItem[] = [
   { key: 'tournaments', label: 'Tournois', sub: 'Daily / weekly', icon: Trophy, grad: ['#EAB308', '#B45309'], href: '/belote/tournaments' },
   { key: 'inbox', label: 'Boîte', sub: 'Notifications', icon: Inbox, grad: ['#A855F7', '#7C3AED'], href: '/belote/inbox' },
   { key: 'challenges', label: 'Défis sport', sub: 'Marche / course A→B', icon: Activity, grad: ['#22C55E', '#16A34A'], href: '/belote/challenges' },
+  { key: 'hkim', label: 'HKIM · Mur', sub: 'Défis Départ→Arrivée + actualité', icon: Footprints, grad: ['#14B8A6', '#0F766E'], href: '/belote/hkim' },
 ];
 
 export default function BeloteHub() {
