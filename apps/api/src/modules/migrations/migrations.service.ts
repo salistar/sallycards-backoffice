@@ -354,6 +354,73 @@ export class MigrationsService implements OnModuleInit {
         }
       },
     },
+    {
+      id: '009-seed-admin-data',
+      description: 'Seed admin : profil (niveaux/vouchers/notifs), tournois ADM-*, activité étalée 30j',
+      up: async (conn) => {
+        const now = Date.now();
+        const day = 24 * 3600 * 1000;
+        const D = (ms: number) => new Date(ms);
+        const admin = await conn.collection('ronda_users').findOne({ email: 'admin@sallycards.com' });
+        if (!admin) return;
+        const uid = admin._id.toString();
+
+        for (const gt of ['belote', 'scopa', 'tarot']) {
+          await conn.collection('levels').updateOne(
+            { userId: uid, gameType: gt },
+            { $set: { userId: uid, gameType: gt, level: 12, xp: 300, nextLevelXp: 400, unlockedFeatures: ['Badge Admin', 'Avatars exclusifs'], lastXpGainAt: D(now), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+
+        const vouchers: any[] = [
+          { code: 'ADMIN-AMZ-100', amount: 100, currency: 'EUR', providerStoreCode: 'amazon', reason: 'Dotation admin', status: 'issued' },
+          { code: 'ADMIN-GP-50', amount: 50, currency: 'EUR', providerStoreCode: 'google_play', reason: 'Dotation admin', status: 'issued' },
+        ];
+        for (const v of vouchers) {
+          await conn.collection('rewards-vouchers').updateOne(
+            { code: v.code },
+            { $set: { ...v, userId: uid, issuedAt: D(now), expiresAt: D(now + 365 * day), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+
+        const notifs: any[] = [
+          { title: 'Bienvenue Admin', body: 'Accès au tableau de bord SallyAdmin.', read: true, ago: 3 },
+          { title: 'Pic d’inscriptions', body: 'Beaucoup de nouveaux joueurs aujourd’hui.', read: false, ago: 0 },
+          { title: 'Tournoi à surveiller', body: 'Un tournoi hebdo arrive à échéance.', read: false, ago: 1 },
+        ];
+        for (const n of notifs) {
+          const set: any = { userId: uid, type: 'system', title: n.title, body: n.body, sentAt: D(now - n.ago * day) };
+          if (n.read) set.readAt = D(now - n.ago * day + 3600000);
+          await conn.collection('notifications').updateOne({ userId: uid, title: n.title }, { $set: set }, { upsert: true });
+        }
+
+        await conn.collection('belote_users').updateOne(
+          { email: 'admin@sallycards.com' },
+          { $set: { 'stats.elo': 1800, 'stats.gamesPlayed': 120, 'stats.gamesWon': 90, isGuest: false, updatedAt: D(now) } },
+        );
+
+        const entries = (k: number) => Array.from({ length: k }, (_, i) => ({ userId: `seed-${i}`, displayName: `Joueur ${i + 1}`, score: 1500 - i * 9 }));
+        for (const gt of ['belote', 'scopa', 'tarot']) {
+          await conn.collection('tournaments').updateOne(
+            { code: `ADM-${gt}-monthly` },
+            { $set: { code: `ADM-${gt}-monthly`, type: 'monthly', variant: gt, difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 30 * day, prizes: [{ rank: 1, gold: 2000 }, { rank: 2, gold: 1000 }, { rank: 3, gold: 500 }], entries: entries(24), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+
+        // Activité étalée sur 30 j : backdate les joueurs seedés (@sallycards.demo)
+        for (const gt of ['belote', 'scopa', 'tarot']) {
+          const seeded = await conn.collection(`${gt}_users`).find({ email: { $regex: '@sallycards.demo$' } }, { projection: { _id: 1 } }).toArray();
+          let i = 0;
+          for (const u of seeded) {
+            await conn.collection(`${gt}_users`).updateOne({ _id: u._id }, { $set: { createdAt: D(now - (i % 28) * day - Math.floor(Math.random() * day)) } });
+            i++;
+          }
+        }
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}
