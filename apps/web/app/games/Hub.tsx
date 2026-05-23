@@ -31,8 +31,8 @@ export function GameHub({ gameType }: { gameType: string }) {
 
   const MENU: Item[] = [
     { key: 'bot', label: 'vs Bot', sub: 'Partie complète contre l’IA', icon: Bot, grad: ['#10B981', '#059669'], href: `${base}/bot` },
-    { key: 'create', label: 'Créer une room', sub: 'Multijoueur temps réel', icon: Plus, grad: ['#7C3AED', '#EC4899'], soon: true },
-    { key: 'join', label: 'Rejoindre', sub: 'Avec un code', icon: Enter, grad: ['#2563EB', '#06B6D4'], soon: true },
+    { key: 'create', label: 'Créer une room', sub: 'Multijoueur temps réel web ↔ mobile', icon: Plus, grad: ['#7C3AED', '#EC4899'], href: `${base}/room` },
+    { key: 'join', label: 'Rejoindre', sub: 'Avec un code', icon: Enter, grad: ['#2563EB', '#06B6D4'], href: `${base}/room` },
     { key: 'rules', label: 'Règles', sub: 'Distribution & scoring', icon: BookOpen, grad: ['#0EA5E9', '#2563EB'], href: `${base}/rules` },
     { key: 'leaderboards', label: 'Classements', sub: 'Top joueurs par ELO', icon: Medal, grad: ['#F59E0B', '#D97706'], href: `${base}/leaderboard` },
     { key: 'rewards', label: 'Récompenses', sub: 'Vouchers & niveaux', icon: Gift, grad: ['#EAB308', '#CA8A04'], href: `${base}/rewards` },
