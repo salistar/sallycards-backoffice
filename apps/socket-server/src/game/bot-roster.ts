@@ -7,6 +7,8 @@ export const BOT_ROSTERS: Record<string, string[]> = {
   belote: ['Pierre', 'Marie', 'Jean', 'Sophie', 'Lucas', 'Emma', 'Hugo', 'Léa', 'Nathan', 'Camille', 'Antoine', 'Manon'],
   scopa: ['Marco', 'Sofia', 'Luca', 'Giulia', 'Paolo', 'Chiara', 'Matteo', 'Elena', 'Davide', 'Rosa', 'Franco', 'Bianca'],
   tarot: ['Henri', 'Claire', 'Julien', 'Nadia', 'Thomas', 'Inès', 'Rachid', 'Yasmine', 'Omar', 'Salma', 'Karim', 'Fatima'],
+  okey: ['Mehmet', 'Ayşe', 'Mustafa', 'Zeynep', 'Emre', 'Elif', 'Burak', 'Deniz', 'Cem', 'Selin', 'Kerem', 'Derya'],
+  quiestce: ['Léon', 'Alice', 'Victor', 'Rose', 'Gaspard', 'Jeanne', 'Théo', 'Manon', 'Noé', 'Lina', 'Sacha', 'Zoé'],
 };
 
 export function pickBots(gameType: string, n: number): string[] {

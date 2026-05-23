@@ -443,6 +443,85 @@ export class MigrationsService implements OnModuleInit {
         for (let i = 0; i < docs.length; i += 200) await conn.collection('game_history').insertMany(docs.slice(i, i + 200));
       },
     },
+    {
+      id: '011-seed-okey-quiestce-data',
+      description: 'Seed Okey & Qui-est-ce : niveau/XP, tournois, leaderboard, historique parties',
+      up: async (conn) => {
+        const now = Date.now();
+        const day = 24 * 3600 * 1000;
+        const D = (ms: number) => new Date(ms);
+        const demo = await conn.collection('ronda_users').findOne({ email: 'demo@sallycards.com' });
+        const uid = demo ? demo._id.toString() : null;
+
+        const mkEntries = (k: number) => Array.from({ length: k }, (_, i) => ({ userId: `seed-${i}`, displayName: `Joueur ${i + 1}`, score: 1000 - i * 7 }));
+        const rosters: Record<string, [string, string, number, number, number][]> = {
+          okey: [
+            ['mehmet_ist', 'Mehmet', 2180, 410, 340], ['ayse_ank', 'Ayşe', 2060, 360, 290], ['mustafa_izm', 'Mustafa', 1970, 320, 248],
+            ['zeynep_bur', 'Zeynep', 1870, 285, 206], ['emre_ada', 'Emre', 1780, 250, 168], ['elif_ant', 'Elif', 1660, 220, 132],
+            ['burak_kon', 'Burak', 1540, 190, 100], ['deniz_gaz', 'Deniz', 1400, 162, 74], ['cem_mer', 'Cem', 1270, 135, 54],
+            ['selin_kay', 'Selin', 1140, 108, 38], ['kerem_esk', 'Kerem', 1020, 88, 27], ['derya_sam', 'Derya', 930, 66, 17],
+          ],
+          quiestce: [
+            ['leon_paris', 'Léon', 2090, 300, 250], ['alice_lyon', 'Alice', 1990, 270, 214], ['victor_lille', 'Victor', 1900, 240, 180],
+            ['rose_nantes', 'Rose', 1810, 215, 150], ['gaspard_nice', 'Gaspard', 1720, 190, 122], ['jeanne_rennes', 'Jeanne', 1600, 165, 96],
+            ['theo_tours', 'Théo', 1490, 142, 74], ['manon_metz', 'Manon', 1360, 120, 56], ['noe_brest', 'Noé', 1240, 100, 40],
+            ['lina_caen', 'Lina', 1120, 82, 28], ['sacha_pau', 'Sacha', 1010, 64, 20], ['zoe_arras', 'Zoé', 920, 48, 12],
+          ],
+        };
+        const games: { gt: string; level: number; xp: number; next: number; feats: string[] }[] = [
+          { gt: 'okey', level: 5, xp: 110, next: 200, feats: ['Tuiles ivoire', 'Chevalet bois'] },
+          { gt: 'quiestce', level: 4, xp: 90, next: 180, feats: ['Galerie déco', 'Indices bonus'] },
+        ];
+
+        for (const g of games) {
+          if (uid) {
+            await conn.collection('levels').updateOne(
+              { userId: uid, gameType: g.gt },
+              { $set: { userId: uid, gameType: g.gt, level: g.level, xp: g.xp, nextLevelXp: g.next, unlockedFeatures: g.feats, lastXpGainAt: D(now), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+              { upsert: true },
+            );
+          }
+          await conn.collection('tournaments').updateOne(
+            { code: `SEED-${g.gt}-open` },
+            { $set: { code: `SEED-${g.gt}-open`, type: 'daily', variant: g.gt, difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 30 * day, prizes: [{ rank: 1, gold: 500 }, { rank: 2, gold: 250 }, { rank: 3, gold: 100 }], entries: mkEntries(14), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+          await conn.collection('tournaments').updateOne(
+            { code: `SEED-${g.gt}-weekly` },
+            { $set: { code: `SEED-${g.gt}-weekly`, type: 'weekly', variant: g.gt, difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + 7 * day, prizes: [{ rank: 1, gold: 1000 }, { rank: 2, gold: 500 }, { rank: 3, gold: 250 }], entries: mkEntries(33), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+          for (const [email, username, elo, gp, gw] of (rosters[g.gt] || [])) {
+            await conn.collection(`${g.gt}_users`).updateOne(
+              { email: `${email}@sallycards.demo` },
+              { $set: { email: `${email}@sallycards.demo`, username, gameType: g.gt, isGuest: false, role: 'player', avatar: '', locale: 'fr', stats: { elo, gamesPlayed: gp, gamesWon: gw, winStreak: 0, bestWinStreak: 0, totalPlayTimeMs: 0 }, updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+              { upsert: true },
+            );
+          }
+          await conn.collection(`${g.gt}_users`).updateOne(
+            { email: 'demo@sallycards.com' },
+            { $set: { 'stats.elo': g.gt === 'okey' ? 1410 : 1320, 'stats.gamesPlayed': g.gt === 'okey' ? 38 : 22, 'stats.gamesWon': g.gt === 'okey' ? 21 : 13, isGuest: false, updatedAt: D(now) } },
+          );
+        }
+
+        // Historique de parties pour le graphe parties/jour (Okey/Qui-est-ce).
+        const existing = await conn.collection('game_history').countDocuments({ gameId: { $regex: '^seed-okey-|^seed-quiestce-' } });
+        if (existing === 0) {
+          const counts: Record<string, number> = { okey: 140, quiestce: 90 };
+          const docs: any[] = [];
+          let n = 0;
+          for (const gt of Object.keys(counts)) {
+            for (let i = 0; i < counts[gt]; i++) {
+              const ago = Math.floor(Math.random() * 30);
+              const ended = new Date(now - ago * day - Math.floor(Math.random() * day));
+              const dur = 120 + Math.floor(Math.random() * 600);
+              docs.push({ gameId: `seed-${gt}-${n++}`, gameType: gt, players: [], result: {}, duration: dur, mode: 'online', startedAt: new Date(ended.getTime() - dur * 1000), endedAt: ended, createdAt: ended, updatedAt: ended });
+            }
+          }
+          for (let i = 0; i < docs.length; i += 200) await conn.collection('game_history').insertMany(docs.slice(i, i + 200));
+        }
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}
