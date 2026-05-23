@@ -75,6 +75,13 @@ export const GAME_META: Record<string, GameMeta> = {
     accent: ['#F59E0B', '#EF4444'],
     tagline: 'Ronda marocaine · 40 cartes · capture par valeur · ronda & tringa',
   },
+  solitaire: {
+    gameType: 'solitaire',
+    label: 'Solitaire',
+    emoji: '🃏',
+    accent: ['#2563EB', '#60A5FA'],
+    tagline: '+130 variantes · Klondike, FreeCell, Yukon, Forty Thieves, Pyramid…',
+  },
 };
 
 export function metaOf(gameType: string): GameMeta {
