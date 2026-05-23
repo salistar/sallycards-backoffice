@@ -18,6 +18,7 @@ import {
   SUITS, SUIT_NAMES, SUIT_SYMBOL, Suit, Card,
 } from '../../lib/engine';
 import VoiceCall from '../_voice';
+import Chat from '../../../games/Chat';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
 const NAVY = '#0A1535';
@@ -114,6 +115,7 @@ export default function RoomTable() {
         <div style={{ marginBottom: 12 }}>
           <VoiceCall roomCode={code} token={token} />
         </div>
+        <Chat roomId={`belote-${code}`} token={token} />
 
         {/* Scoreboard + atout */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
