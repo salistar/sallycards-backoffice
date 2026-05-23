@@ -7,6 +7,7 @@ import { UsersService } from '../../users/users.service';
 export interface JwtPayload {
   sub: string;
   email: string;
+  username?: string;
   role: string;
   isGuest: boolean;
 }
@@ -29,6 +30,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
-    return { userId: payload.sub, email: payload.email, role: payload.role, isGuest: payload.isGuest };
+    return { userId: payload.sub, email: payload.email, username: payload.username || (user as any)?.username, role: payload.role, isGuest: payload.isGuest };
   }
 }
