@@ -107,8 +107,14 @@ export class AdminController {
   }
 
   @Get('stats/overview')
-  @ApiOperation({ summary: 'Stats détaillées (jour/semaine/mois + ressources)' })
-  async overview() {
-    return this.adminService.getOverview();
+  @ApiOperation({ summary: 'Stats détaillées calculées (fenêtre ?days=7|30|90)' })
+  async overview(@Query('days') days?: string) {
+    return this.adminService.getOverview(days ? parseInt(days, 10) : 30);
+  }
+
+  @Get('metrics')
+  @ApiOperation({ summary: 'Métriques réelles serveur (CPU/RAM/disque) + base de données' })
+  async metrics() {
+    return this.adminService.getMetrics();
   }
 }

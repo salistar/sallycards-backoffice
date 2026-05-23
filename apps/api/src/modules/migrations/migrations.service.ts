@@ -421,6 +421,28 @@ export class MigrationsService implements OnModuleInit {
         }
       },
     },
+    {
+      id: '010-seed-game-history',
+      description: 'Seed historique de parties (game_history) étalé sur 30j → graphe parties/jour réel',
+      up: async (conn) => {
+        const existing = await conn.collection('game_history').countDocuments({ gameId: { $regex: '^seed-' } });
+        if (existing > 0) return;
+        const now = Date.now();
+        const day = 24 * 3600 * 1000;
+        const counts: Record<string, number> = { belote: 220, scopa: 160, tarot: 160, ronda: 60, kdoub: 40 };
+        const docs: any[] = [];
+        let n = 0;
+        for (const gt of Object.keys(counts)) {
+          for (let i = 0; i < counts[gt]; i++) {
+            const ago = Math.floor(Math.random() * 30);
+            const ended = new Date(now - ago * day - Math.floor(Math.random() * day));
+            const dur = 120 + Math.floor(Math.random() * 600);
+            docs.push({ gameId: `seed-${gt}-${n++}`, gameType: gt, players: [], result: {}, duration: dur, mode: 'online', startedAt: new Date(ended.getTime() - dur * 1000), endedAt: ended, createdAt: ended, updatedAt: ended });
+          }
+        }
+        for (let i = 0; i < docs.length; i += 200) await conn.collection('game_history').insertMany(docs.slice(i, i + 200));
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}
