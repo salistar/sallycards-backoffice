@@ -32,13 +32,24 @@ export class AdminService {
     @InjectConnection() private readonly connection: Connection,
   ) {}
 
-  /** Crée et envoie une notification (à un jeu ou à tous). */
-  async broadcastNotification(dto: { gameType?: string; type?: string; title: string; body: string }) {
+  /** Crée et envoie une notification (à un jeu, à tous, ou ciblée par email). */
+  async broadcastNotification(dto: { gameType?: string; type?: string; title: string; body: string; email?: string }) {
     if (!dto?.title || !dto?.body) throw new BadRequestException('title et body requis');
     const type = dto.type || 'system';
-    const games = dto.gameType && dto.gameType !== 'all' ? [dto.gameType] : this.GAME_TYPES;
     const now = new Date();
     let sent = 0;
+    if (dto.email && dto.email.trim()) {
+      const ids = new Set<string>();
+      for (const gt of this.GAME_TYPES) {
+        const u = await this.connection.collection(`${gt}_users`).findOne({ email: dto.email.trim() }, { projection: { _id: 1 } });
+        if (u) ids.add(u._id.toString());
+      }
+      if (ids.size === 0) throw new BadRequestException('aucun utilisateur avec cet email');
+      const docs = [...ids].map((userId) => ({ userId, type, title: dto.title, body: dto.body, payload: {}, sentAt: now }));
+      await this.connection.collection('notifications').insertMany(docs);
+      return { sent: docs.length, target: dto.email };
+    }
+    const games = dto.gameType && dto.gameType !== 'all' ? [dto.gameType] : this.GAME_TYPES;
     for (const gt of games) {
       const users = await this.connection.collection(`${gt}_users`).find({}, { projection: { _id: 1 } }).toArray();
       const docs = users.map((u) => ({ userId: u._id.toString(), type, title: dto.title, body: dto.body, payload: {}, sentAt: now }));
@@ -46,6 +57,27 @@ export class AdminService {
     }
     this.logger.log(`Broadcast "${dto.title}" → ${sent} notifs`);
     return { sent, games };
+  }
+
+  /** Historique des bons d'achat émis (récents). */
+  async listGifts(limit = 60) {
+    return this.connection.collection('rewards-vouchers').find({}, { projection: { code: 1, userId: 1, amount: 1, currency: 1, providerStoreCode: 1, reason: 1, status: 1, issuedAt: 1 } }).sort({ issuedAt: -1 }).limit(Math.min(limit, 200)).toArray();
+  }
+  /** Révoque un bon (statut expired). */
+  async revokeGift(code: string) {
+    await this.connection.collection('rewards-vouchers').updateOne({ code }, { $set: { status: 'expired', updatedAt: new Date() } });
+    return { ok: true };
+  }
+  /** Liste des comptes bannis. */
+  async listBanned() {
+    return this.connection.collection('banned_users').find({}).sort({ at: -1 }).limit(200).toArray();
+  }
+  /** Détail d'un tournoi avec classement trié. */
+  async getTournament(code: string) {
+    const t: any = await this.connection.collection('tournaments').findOne({ code });
+    if (!t) throw new NotFoundException();
+    const ranking = (t.entries || []).slice().sort((a: any, b: any) => (b.score || 0) - (a.score || 0)).slice(0, 50);
+    return { code: t.code, type: t.type, variant: t.variant, status: t.status, prizes: t.prizes || [], participants: (t.entries || []).length, ranking };
   }
 
   /** Liste des notifications envoyées, groupées par titre/message (broadcasts). */

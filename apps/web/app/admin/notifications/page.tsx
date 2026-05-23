@@ -14,6 +14,7 @@ export default function AdminNotifications() {
   const [type, setType] = useState('system');
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [email, setEmail] = useState('');
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [recent, setRecent] = useState<any[]>([]);
@@ -27,8 +28,8 @@ export default function AdminNotifications() {
     if (!title.trim() || !body.trim()) { setFlash('Titre et message requis'); return; }
     setBusy(true); setFlash(null);
     try {
-      const r = await apiClient.apiPost<{ sent: number }>('/admin/notifications/broadcast', { gameType, type, title, body });
-      setFlash(`Notification envoyée à ${r.sent} utilisateur(s).`); setTitle(''); setBody(''); await loadRecent();
+      const r = await apiClient.apiPost<{ sent: number }>('/admin/notifications/broadcast', { gameType, type, title, body, email: email.trim() || undefined });
+      setFlash(`Notification envoyée à ${r.sent} utilisateur(s)${email.trim() ? ` (${email.trim()})` : ''}.`); setTitle(''); setBody(''); await loadRecent();
     } catch (e: any) { setFlash(e?.message || 'Échec (accès admin requis)'); } finally { setBusy(false); }
   };
 
@@ -54,6 +55,7 @@ export default function AdminNotifications() {
             </Field>
           </div>
         </div>
+        <Field label="Destinataire ciblé (email) — laisser vide pour diffuser au jeu choisi"><input style={inputStyle} value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ex. demo@sallycards.com (optionnel)" /></Field>
         <Field label="Titre"><input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} placeholder="Ex. Nouveau tournoi !" /></Field>
         <Field label="Message"><textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 90 }} value={body} onChange={(e) => setBody(e.target.value)} maxLength={300} placeholder="Le message envoyé dans la boîte de réception des joueurs…" /></Field>
         <Btn onClick={send} disabled={busy}><Send style={{ width: 15, height: 15, display: 'inline', verticalAlign: 'middle', marginRight: 5 }} />{busy ? 'Envoi…' : 'Envoyer'}</Btn>

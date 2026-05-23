@@ -5,9 +5,9 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Trophy, Download, Lock, Trash2 } from 'lucide-react';
+import { Trophy, Download, Lock, Trash2, Eye } from 'lucide-react';
 import { apiClient } from '../../lib/api';
-import { AdminCard, Btn, Field, inputStyle, Flash, ALL_GAMES, GOLD, BLUE, card, downloadCSV } from '../_ui';
+import { AdminCard, Btn, Field, inputStyle, Flash, ALL_GAMES, GOLD, BLUE, CARD, card, downloadCSV } from '../_ui';
 
 const ST: Record<string, { bg: string; fg: string }> = {
   open: { bg: 'rgba(34,197,94,0.15)', fg: '#4ADE80' },
@@ -47,6 +47,16 @@ export default function AdminTournaments() {
   const close = async (code: string) => { try { await apiClient.apiPatch(`/admin/tournaments/${code}`, { status: 'closed' }); setFlash(`Tournoi ${code} clôturé.`); await load(); } catch (e: any) { setFlash(e?.message || 'Échec'); } };
   const del = async (code: string) => { if (!confirm(`Supprimer le tournoi ${code} ?`)) return; try { await apiClient.apiDelete(`/admin/tournaments/${code}`); setFlash(`Tournoi ${code} supprimé.`); await load(); } catch (e: any) { setFlash(e?.message || 'Échec'); } };
 
+  const [detail, setDetail] = useState<any | null>(null);
+  const [pz, setPz] = useState<[number, number, number]>([500, 250, 100]);
+  const openDetail = async (code: string) => {
+    try { const d = await apiClient.apiGet<any>(`/admin/tournaments/${code}`); setDetail(d); const p = d.prizes || []; setPz([p[0]?.gold || 0, p[1]?.gold || 0, p[2]?.gold || 0]); } catch (e: any) { setFlash(e?.message || 'Échec'); }
+  };
+  const savePrizes = async () => {
+    if (!detail) return;
+    try { await apiClient.apiPatch(`/admin/tournaments/${detail.code}`, { prizes: [{ rank: 1, gold: pz[0] }, { rank: 2, gold: pz[1] }, { rank: 3, gold: pz[2] }] }); setFlash('Dotations mises à jour.'); setDetail(null); await load(); } catch (e: any) { setFlash(e?.message || 'Échec'); }
+  };
+
   return (
     <div style={{ maxWidth: 760 }}>
       <h1 style={{ color: '#fff', fontSize: '1.6rem', fontWeight: 900, marginBottom: 18 }}>Tournois</h1>
@@ -79,6 +89,7 @@ export default function AdminTournaments() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: 999, background: st.bg, color: st.fg }}>{t.status}</span>
+                  <button onClick={() => openDetail(t.code)} title="Détails / classement / dotations" style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: 7, color: '#93C5FD', cursor: 'pointer' }}><Eye style={{ width: 15, height: 15 }} /></button>
                   {t.status !== 'closed' && <button onClick={() => close(t.code)} title="Clôturer" style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: 7, color: '#FCD34D', cursor: 'pointer' }}><Lock style={{ width: 15, height: 15 }} /></button>}
                   <button onClick={() => del(t.code)} title="Supprimer" style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: 7, color: '#FCA5A5', cursor: 'pointer' }}><Trash2 style={{ width: 15, height: 15 }} /></button>
                 </div>
@@ -87,6 +98,33 @@ export default function AdminTournaments() {
           })}
         </div>
       </AdminCard>
+
+      {detail && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 16 }} onClick={() => setDetail(null)}>
+          <div style={{ background: CARD, borderRadius: 14, padding: 22, width: 460, maxWidth: '100%', maxHeight: '85vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ color: '#fff', fontWeight: 800, marginBottom: 4 }}><span style={{ textTransform: 'capitalize' }}>{detail.variant}</span> · {detail.type}</h2>
+            <div style={{ color: BLUE, fontSize: '0.8rem', marginBottom: 14 }}>{detail.participants} participants · statut {detail.status}</div>
+            <div style={{ color: GOLD, fontWeight: 800, fontSize: '0.82rem', marginBottom: 8 }}>Dotations (modifiables)</div>
+            <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+              {([0, 1, 2] as const).map((i) => (
+                <div key={i} style={{ flex: 1 }}><Field label={`${['🥇', '🥈', '🥉'][i]} Gold`}><input type="number" style={inputStyle} value={pz[i]} onChange={(e) => { const v = [...pz] as [number, number, number]; v[i] = +e.target.value; setPz(v); }} /></Field></div>
+              ))}
+            </div>
+            <Btn onClick={savePrizes}>Enregistrer les dotations</Btn>
+            <div style={{ color: GOLD, fontWeight: 800, fontSize: '0.82rem', margin: '18px 0 8px' }}>Classement</div>
+            <div style={{ display: 'grid', gap: 5 }}>
+              {(detail.ranking || []).length === 0 && <span style={{ color: '#64748B', fontSize: '0.82rem' }}>Aucun participant.</span>}
+              {(detail.ranking || []).map((r: any, i: number) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: '#E2E8F0' }}>
+                  <span><span style={{ color: i < 3 ? GOLD : '#64748B', fontWeight: 800, marginRight: 6 }}>{i + 1}</span>{r.displayName || r.userId}</span>
+                  <strong style={{ color: GOLD }}>{r.score ?? 0}</strong>
+                </div>
+              ))}
+            </div>
+            <div style={{ textAlign: 'right', marginTop: 14 }}><Btn kind="ghost" onClick={() => setDetail(null)}>Fermer</Btn></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
