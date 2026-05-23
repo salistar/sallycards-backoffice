@@ -328,6 +328,32 @@ export class MigrationsService implements OnModuleInit {
         }
       },
     },
+    {
+      id: '008-seed-admin-account',
+      description: 'Compte admin (admin@sallycards.com / Admin123456) rôle admin dans toutes les collections *_users',
+      up: async (conn) => {
+        const bcrypt = require('bcrypt');
+        const passwordHash = await bcrypt.hash('Admin123456', 12);
+        const games = ['ronda', 'kdoub', 'belote', 'poker', 'tarot', 'scopa', 'okey', 'concentration', 'solitaire', 'quiestce', 'kantcopy'];
+        const now = new Date();
+        for (const gameType of games) {
+          await conn.collection(`${gameType}_users`).updateOne(
+            { email: 'admin@sallycards.com' },
+            {
+              $set: {
+                email: 'admin@sallycards.com', username: 'Admin', passwordHash, avatar: '', locale: 'fr', gameType,
+                coins: 9999,
+                stats: { gamesPlayed: 0, gamesWon: 0, elo: 1000, winStreak: 0, bestWinStreak: 0, totalPlayTimeMs: 0 },
+                settings: { theme: 'system', soundEnabled: true, hapticEnabled: true, language: 'fr', notificationsEnabled: true, autoMatchmaking: false, cardBackStyle: 'classic' },
+                role: 'admin', isGuest: false, status: 'offline', isVerified: true, updatedAt: now,
+              },
+              $setOnInsert: { friends: [], friendRequests: [], blockedUsers: [], deviceTokens: [], createdAt: now },
+            },
+            { upsert: true },
+          );
+        }
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}

@@ -67,4 +67,36 @@ export class AdminController {
   async getGamesByType() {
     return this.adminService.getGamesByType();
   }
+
+  // ── Notifications, tournois, cadeaux, activité ─────────────────────────────
+
+  @Post('notifications/broadcast')
+  @ApiOperation({ summary: 'Créer et envoyer une notification aux utilisateurs' })
+  async broadcast(@Body() dto: { gameType?: string; type?: string; title: string; body: string }) {
+    return this.adminService.broadcastNotification(dto);
+  }
+
+  @Post('tournaments')
+  @ApiOperation({ summary: 'Créer un tournoi' })
+  async createTournament(@Body() dto: any) {
+    return this.adminService.createTournament(dto);
+  }
+
+  @Post('gifts')
+  @ApiOperation({ summary: 'Créer et envoyer un cadeau (bon) avec condition' })
+  async createGift(@Body() dto: any) {
+    return this.adminService.createGift(dto);
+  }
+
+  @Get('activity')
+  @ApiOperation({ summary: 'Surveiller l\'activité des utilisateurs (défis)' })
+  async activity(@Query('gameType') gameType?: string) {
+    return this.adminService.getUserActivity(gameType);
+  }
+
+  @Get('stats/overview')
+  @ApiOperation({ summary: 'Stats détaillées (jour/semaine/mois + ressources)' })
+  async overview() {
+    return this.adminService.getOverview();
+  }
 }
