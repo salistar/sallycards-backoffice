@@ -39,8 +39,7 @@ export function GameHub({ gameType }: { gameType: string }) {
     { key: 'friends', label: 'Amis', sub: 'Liste & invitations', icon: Users, grad: ['#3B82F6', '#1D4ED8'], href: `${base}/friends` },
     { key: 'tournaments', label: 'Tournois', sub: 'Daily / weekly', icon: Trophy, grad: ['#EAB308', '#B45309'], href: `${base}/tournaments` },
     { key: 'inbox', label: 'Boîte', sub: 'Notifications', icon: Inbox, grad: ['#A855F7', '#7C3AED'], href: `${base}/inbox` },
-    { key: 'challenges', label: 'Défis sport', sub: 'Marche / course A→B', icon: Activity, grad: ['#22C55E', '#16A34A'], href: `${base}/challenges` },
-    { key: 'hkim', label: 'HKIM · Mur', sub: 'Défis Départ→Arrivée + actualité', icon: Footprints, grad: ['#14B8A6', '#0F766E'], href: `${base}/hkim` },
+    { key: 'hkim', label: 'Défis & Mur', sub: 'Défis sport A→B + mur de partage', icon: Footprints, grad: ['#14B8A6', '#0F766E'], href: `${base}/hkim` },
   ];
 
   if (!user) {

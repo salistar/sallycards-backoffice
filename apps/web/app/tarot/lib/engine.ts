@@ -27,6 +27,8 @@ export interface TarotState {
   result: null | { takerPoints: number; bouts: number; target: number; takerWins: boolean };
 }
 
+import { pickBots } from '../../games/bots';
+
 export const TSUITS: TSuit[] = ['pique', 'coeur', 'carreau', 'trefle'];
 export const SUIT_SYMBOL: Record<TSuit, string> = { pique: '♠', coeur: '♥', carreau: '♦', trefle: '♣' };
 export const SUIT_RED: Record<TSuit, boolean> = { pique: false, coeur: true, carreau: true, trefle: false };
@@ -89,11 +91,12 @@ export function newGame(): TarotState {
   const ecartIds = new Set(ecart.map((c) => c.id));
   hands[0] = hands[0].filter((c) => !ecartIds.has(c.id));
 
+  const bn = pickBots('tarot', 3);
   const players: TPlayer[] = [
     { id: 'p0', name: 'Vous', isBot: false, hand: sortHand(hands[0]) },
-    { id: 'p1', name: 'Bot Nord', isBot: true, hand: hands[1] },
-    { id: 'p2', name: 'Bot Est', isBot: true, hand: hands[2] },
-    { id: 'p3', name: 'Bot Ouest', isBot: true, hand: hands[3] },
+    { id: 'p1', name: bn[0] || 'Bot 1', isBot: true, hand: hands[1] },
+    { id: 'p2', name: bn[1] || 'Bot 2', isBot: true, hand: hands[2] },
+    { id: 'p3', name: bn[2] || 'Bot 3', isBot: true, hand: hands[3] },
   ];
   return { phase: 'playing', players, trick: [], leadIndex: 0, turn: 0, wonTaker: [], wonDefense: [], ecart, lastTrickWinner: null, result: null };
 }

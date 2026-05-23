@@ -29,8 +29,10 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Sans ça, le client tombe sur localhost:3000 → "Impossible de contacter le serveur".
 ARG NEXT_PUBLIC_API_URL=https://api.salistar.com/api/v1
 ARG NEXT_PUBLIC_SOCKET_URL=https://ws.salistar.com
+ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyAa1lBSroSXA-Om4mio84-SWAcmzQgYv8w
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL
+ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
 RUN cd apps/web && npx next build
 

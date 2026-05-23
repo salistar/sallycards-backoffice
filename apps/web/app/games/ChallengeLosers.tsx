@@ -9,12 +9,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Footprints, Send } from 'lucide-react';
+import { Footprints, Send, MapPin } from 'lucide-react';
 import { apiClient } from '../lib/api';
+import { MapPicker, Pt } from './GeoMap';
 
 const GOLD = '#FCD34D';
 const BLUE = '#93C5FD';
-// Coordonnées par défaut (Casablanca) — le vrai parcours se fait sur mobile.
+// Coordonnées par défaut (Casablanca) si le gagnant ne pose pas de points.
 const A = { lat: 33.5731, lng: -7.5898, label: 'Départ' };
 const B = { lat: 33.595, lng: -7.618, label: 'Arrivée' };
 
@@ -22,6 +23,8 @@ export default function ChallengeLosers({ gameType, loserIds }: { gameType: stri
   const [type, setType] = useState<'walk' | 'run'>('walk');
   const [km, setKm] = useState(2);
   const [days, setDays] = useState(2);
+  const [a, setA] = useState<Pt | null>(null);
+  const [b, setB] = useState<Pt | null>(null);
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -34,8 +37,9 @@ export default function ChallengeLosers({ gameType, loserIds }: { gameType: stri
     setBusy(true); setErr(null);
     try {
       const deadlineAt = new Date(Date.now() + days * 24 * 3600 * 1000).toISOString();
+      const pointA = a || A; const pointB = b || B;
       await Promise.all(loserIds.map((receiverId) =>
-        apiClient.apiPost('/challenges/sport', { receiverId, gameType, type, distanceMeters: Math.round(km * 1000), deadlineAt, pointA: A, pointB: B })
+        apiClient.apiPost('/challenges/sport', { receiverId, gameType, type, distanceMeters: Math.round(km * 1000), deadlineAt, pointA, pointB })
           .catch(() => null),
       ));
       setSent(true);
@@ -64,8 +68,14 @@ export default function ChallengeLosers({ gameType, loserIds }: { gameType: stri
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
         {[1, 2, 3, 5].map((d) => <button key={d} onClick={() => setKm(d)} style={pill(km === d)}>{d} km</button>)}
       </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
         {[1, 2, 3].map((d) => <button key={d} onClick={() => setDays(d)} style={pill(days === d)}>{d} j</button>)}
+      </div>
+      <div style={{ color: BLUE, fontSize: '0.78rem', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <MapPin style={{ width: 13, height: 13 }} /> Clique sur la carte : 1er point = Départ, 2e = Arrivée {a && b ? '✓' : a ? '(pose l’arrivée)' : ''}
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <MapPicker onPick={(na, nb) => { setA(na); setB(nb); }} />
       </div>
       <button onClick={assign} disabled={busy} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: '#0A1535', fontWeight: 800, border: 'none', borderRadius: 10, padding: '10px 18px', cursor: 'pointer', opacity: busy ? 0.7 : 1 }}>
         <Send style={{ width: 15, height: 15 }} /> {busy ? 'Envoi…' : `Imposer le défi (${loserIds.length})`}

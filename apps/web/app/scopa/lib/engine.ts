@@ -27,6 +27,8 @@ export interface ScopaState {
   winner: 0 | 1 | null;
 }
 
+import { pickBots } from '../../games/bots';
+
 export const SUITS: Suit[] = ['spade', 'coppe', 'bastoni', 'denari'];
 const SUIT_LETTER: Record<Suit, string> = { spade: 'E', coppe: 'C', bastoni: 'B', denari: 'O' };
 export const SUIT_NAME: Record<Suit, string> = { spade: 'Spade', coppe: 'Coppe', bastoni: 'Bastoni', denari: 'Denari' };
@@ -45,7 +47,7 @@ function buildDeck(): Card[] {
 export function newGame(target = 11): ScopaState {
   const players: [SPlayer, SPlayer] = [
     { id: 'p0', name: 'Vous', isBot: false, hand: [], captured: [], scope: 0 },
-    { id: 'p1', name: 'Bot', isBot: true, hand: [], captured: [], scope: 0 },
+    { id: 'p1', name: pickBots('scopa', 1)[0] || 'Bot', isBot: true, hand: [], captured: [], scope: 0 },
   ];
   const st: ScopaState = { phase: 'playing', players, table: [], deck: [], turn: 0, lastCapturer: null, roundNumber: 0, scores: [0, 0], target, lastBreakdown: null, winner: null };
   return deal(st, true);

@@ -8,6 +8,7 @@
 import * as Belote from './belote-engine';
 import * as Scopa from './scopa-engine';
 import * as Tarot from './tarot-engine';
+import { pickBots } from './bot-roster';
 
 export interface Human { userId: string; name: string }
 
@@ -22,19 +23,21 @@ export interface GameAdapter {
   isOver(state: any): boolean;
 }
 
-const BOT_NAMES = ['Bot Sud', 'Bot Est', 'Bot Nord', 'Bot Ouest'];
-function seatsFor(humans: Human[], count: number): { id: string; name: string; isBot: boolean }[] {
+function seatsFor(humans: Human[], count: number, gameType: string): { id: string; name: string; isBot: boolean }[] {
+  const botCount = Math.max(0, count - humans.length);
+  const names = pickBots(gameType, botCount);
   const seats: { id: string; name: string; isBot: boolean }[] = [];
+  let bi = 0;
   for (let i = 0; i < count; i++) {
     const h = humans[i];
-    seats.push(h ? { id: h.userId, name: h.name, isBot: false } : { id: `bot-${i}`, name: BOT_NAMES[i % BOT_NAMES.length], isBot: true });
+    seats.push(h ? { id: h.userId, name: h.name, isBot: false } : { id: `bot-${i}`, name: names[bi++] || `Bot ${i}`, isBot: true });
   }
   return seats;
 }
 
 const beloteAdapter: GameAdapter = {
   seatCount: 4, maxHumans: 2,
-  build: (humans) => Belote.buildGame(seatsFor(humans, 4)),
+  build: (humans) => Belote.buildGame(seatsFor(humans, 4, 'belote')),
   view: (s, you) => Belote.viewFor(s, you),
   currentId: (s) => Belote.getCurrentPlayer(s)?.id ?? null,
   applyAction: (s, userId, a) => {
@@ -59,7 +62,7 @@ const beloteAdapter: GameAdapter = {
 
 const scopaAdapter: GameAdapter = {
   seatCount: 2, maxHumans: 2,
-  build: (humans) => Scopa.buildScopa(seatsFor(humans, 2)),
+  build: (humans) => Scopa.buildScopa(seatsFor(humans, 2, 'scopa')),
   view: (s, you) => Scopa.scopaView(s, you),
   currentId: (s) => Scopa.scopaCurrentId(s),
   applyAction: (s, userId, a) => (a?.type === 'PLAY_CARD' ? Scopa.scopaPlay(s, userId, a.cardId) : s),
@@ -69,7 +72,7 @@ const scopaAdapter: GameAdapter = {
 
 const tarotAdapter: GameAdapter = {
   seatCount: 4, maxHumans: 4,
-  build: (humans) => Tarot.buildTarot(seatsFor(humans, 4)),
+  build: (humans) => Tarot.buildTarot(seatsFor(humans, 4, 'tarot')),
   view: (s, you) => Tarot.tarotView(s, you),
   currentId: (s) => Tarot.tarotCurrentId(s),
   applyAction: (s, userId, a) => (a?.type === 'PLAY_CARD' ? Tarot.tarotPlay(s, userId, a.cardId) : s),
