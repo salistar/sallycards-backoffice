@@ -807,6 +807,63 @@ export class MigrationsService implements OnModuleInit {
         }
       },
     },
+    {
+      id: '017-seed-solitaire-data',
+      description: 'Seed Solitaire : niveau/XP, tournoi deal-du-jour, leaderboard, historique parties',
+      up: async (conn) => {
+        const now = Date.now();
+        const day = 24 * 3600 * 1000;
+        const D = (ms: number) => new Date(ms);
+        const demo = await conn.collection('ronda_users').findOne({ email: 'demo@sallycards.com' });
+        const uid = demo ? demo._id.toString() : null;
+        const mkEntries = (k: number) => Array.from({ length: k }, (_, i) => ({ userId: `seed-${i}`, displayName: `Joueur ${i + 1}`, score: 5000 - i * 130 }));
+        const roster: [string, string, number, number, number][] = [
+          ['emma_lyon', 'Emma', 2280, 620, 540], ['noah_paris', 'Noah', 2150, 560, 472], ['lea_nice', 'Léa', 2040, 500, 410],
+          ['adam_lille', 'Adam', 1930, 450, 358], ['mia_nantes', 'Mia', 1820, 400, 308], ['leo_rennes', 'Leo', 1700, 352, 250],
+          ['chloe_tours', 'Chloé', 1570, 300, 196], ['hugo_metz', 'Hugo', 1430, 250, 150], ['jade_brest', 'Jade', 1290, 200, 110],
+          ['paul_caen', 'Paul', 1150, 155, 74], ['nina_pau', 'Nina', 1025, 110, 46], ['theo_dijon', 'Théo', 935, 78, 28],
+        ];
+        if (uid) {
+          await conn.collection('levels').updateOne(
+            { userId: uid, gameType: 'solitaire' },
+            { $set: { userId: uid, gameType: 'solitaire', level: 9, xp: 200, nextLevelXp: 300, unlockedFeatures: ['Dos premium', 'Tapis classiques', '+130 variantes'], lastXpGainAt: D(now), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-solitaire-open' },
+          { $set: { code: 'SEED-solitaire-open', type: 'daily', variant: 'solitaire', difficulty: 'medium', status: 'open', startsAt: now, endsAt: now + day, prizes: [{ rank: 1, gold: 400 }, { rank: 2, gold: 200 }, { rank: 3, gold: 100 }], entries: mkEntries(20), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+        await conn.collection('tournaments').updateOne(
+          { code: 'SEED-solitaire-weekly' },
+          { $set: { code: 'SEED-solitaire-weekly', type: 'weekly', variant: 'solitaire', difficulty: 'hard', status: 'open', startsAt: now, endsAt: now + 7 * day, prizes: [{ rank: 1, gold: 1500 }, { rank: 2, gold: 750 }, { rank: 3, gold: 300 }], entries: mkEntries(40), updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+          { upsert: true },
+        );
+        for (const [email, username, elo, gp, gw] of roster) {
+          await conn.collection('solitaire_users').updateOne(
+            { email: `${email}@sallycards.demo` },
+            { $set: { email: `${email}@sallycards.demo`, username, gameType: 'solitaire', isGuest: false, role: 'player', avatar: '', locale: 'fr', stats: { elo, gamesPlayed: gp, gamesWon: gw, winStreak: 0, bestWinStreak: 0, totalPlayTimeMs: 0 }, updatedAt: D(now) }, $setOnInsert: { createdAt: D(now) } },
+            { upsert: true },
+          );
+        }
+        await conn.collection('solitaire_users').updateOne(
+          { email: 'demo@sallycards.com' },
+          { $set: { 'stats.elo': 1500, 'stats.gamesPlayed': 88, 'stats.gamesWon': 61, isGuest: false, updatedAt: D(now) } },
+        );
+        const existing = await conn.collection('game_history').countDocuments({ gameId: { $regex: '^seed-solitaire-' } });
+        if (existing === 0) {
+          const docs: any[] = [];
+          for (let i = 0; i < 180; i++) {
+            const ago = Math.floor(Math.random() * 30);
+            const ended = new Date(now - ago * day - Math.floor(Math.random() * day));
+            const dur = 90 + Math.floor(Math.random() * 600);
+            docs.push({ gameId: `seed-solitaire-${i}`, gameType: 'solitaire', players: [], result: {}, duration: dur, mode: 'solo', startedAt: new Date(ended.getTime() - dur * 1000), endedAt: ended, createdAt: ended, updatedAt: ended });
+          }
+          for (let i = 0; i < docs.length; i += 200) await conn.collection('game_history').insertMany(docs.slice(i, i + 200));
+        }
+      },
+    },
   ];
 
   constructor(@InjectConnection() private readonly connection: Connection) {}
