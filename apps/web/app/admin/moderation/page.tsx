@@ -6,23 +6,29 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Trash2, Ban } from 'lucide-react';
+import { Trash2, Ban, RotateCcw } from 'lucide-react';
 import { apiClient } from '../../lib/api';
 import { AdminCard, Flash, inputStyle, card, GOLD, BLUE, ALL_GAMES } from '../_ui';
 
 export default function AdminModeration() {
   const [gameType, setGameType] = useState('all');
   const [posts, setPosts] = useState<any[]>([]);
+  const [banned, setBanned] = useState<any[]>([]);
   const [flash, setFlash] = useState<string | null>(null);
 
+  const loadBanned = useCallback(async () => {
+    try { const r = await apiClient.apiGet<any[]>('/admin/banned'); setBanned(Array.isArray(r) ? r : []); } catch { /* */ }
+  }, []);
   const load = useCallback(async () => {
     try { const r = await apiClient.apiGet<any[]>(`/admin/wall?gameType=${gameType}`); setPosts(Array.isArray(r) ? r : []); setFlash(null); }
     catch (e: any) { setFlash(e?.message || 'Accès admin requis'); }
   }, [gameType]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadBanned(); }, [loadBanned]);
 
   const del = async (id: string) => { if (!confirm('Supprimer ce post ?')) return; try { await apiClient.apiDelete(`/admin/wall/${id}`); setFlash('Post supprimé.'); await load(); } catch (e: any) { setFlash(e?.message || 'Échec'); } };
-  const ban = async (p: any) => { if (!confirm(`Bannir ${p.username} du mur ?`)) return; try { const r = await apiClient.apiPost<{ banned: number }>('/admin/ban', { userId: p.userId }); setFlash(`${p.username} banni (ne peut plus poster).`); } catch (e: any) { setFlash(e?.message || 'Échec'); } };
+  const ban = async (p: any) => { if (!confirm(`Bannir ${p.username} du mur ?`)) return; try { await apiClient.apiPost('/admin/ban', { userId: p.userId }); setFlash(`${p.username} banni (ne peut plus poster).`); await loadBanned(); } catch (e: any) { setFlash(e?.message || 'Échec'); } };
+  const unban = async (userId: string) => { try { await apiClient.apiPost('/admin/unban', { userId }); setFlash('Débanni.'); await loadBanned(); } catch (e: any) { setFlash(e?.message || 'Échec'); } };
 
   return (
     <div style={{ maxWidth: 760 }}>
@@ -48,6 +54,19 @@ export default function AdminModeration() {
                 <button onClick={() => del(p._id)} title="Supprimer le post" style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, padding: 7, color: '#FCA5A5', cursor: 'pointer' }}><Trash2 style={{ width: 15, height: 15 }} /></button>
                 <button onClick={() => ban(p)} title="Bannir l'auteur" style={{ background: 'rgba(239,68,68,0.18)', border: 'none', borderRadius: 8, padding: 7, color: '#EF4444', cursor: 'pointer' }}><Ban style={{ width: 15, height: 15 }} /></button>
               </div>
+            </div>
+          ))}
+        </div>
+      </AdminCard>
+
+      <div style={{ height: 18 }} />
+      <AdminCard title={`Comptes bannis (${banned.length})`}>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {banned.length === 0 && <span style={{ color: '#64748B', fontSize: '0.85rem' }}>Aucun compte banni.</span>}
+          {banned.map((b) => (
+            <div key={b.userId} style={{ ...card, padding: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div><code style={{ color: '#fff', fontSize: '0.8rem' }}>{b.userId}</code>{b.at && <span style={{ color: '#64748B', fontSize: '0.72rem' }}> · {new Date(b.at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>}</div>
+              <button onClick={() => unban(b.userId)} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(34,197,94,0.18)', border: 'none', borderRadius: 8, padding: '6px 12px', color: '#4ADE80', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem' }}><RotateCcw style={{ width: 14, height: 14 }} /> Débannir</button>
             </div>
           ))}
         </div>

@@ -107,6 +107,32 @@ export class AdminController {
     return r;
   }
 
+  @Get('gifts')
+  @ApiOperation({ summary: 'Historique des bons émis' })
+  async listGifts() {
+    return this.adminService.listGifts();
+  }
+
+  @Post('gifts/:code/revoke')
+  @ApiOperation({ summary: 'Révoquer un bon' })
+  async revokeGift(@Param('code') code: string, @Req() req: any) {
+    const r = await this.adminService.revokeGift(code);
+    await this.adminService.audit('gift.revoke', req.user?.userId, { code });
+    return r;
+  }
+
+  @Get('banned')
+  @ApiOperation({ summary: 'Liste des comptes bannis' })
+  async listBanned() {
+    return this.adminService.listBanned();
+  }
+
+  @Get('tournaments/:code')
+  @ApiOperation({ summary: 'Détail + classement d\'un tournoi' })
+  async getTournament(@Param('code') code: string) {
+    return this.adminService.getTournament(code);
+  }
+
   @Get('activity')
   @ApiOperation({ summary: 'Surveiller l\'activité des utilisateurs (défis)' })
   async activity(@Query('gameType') gameType?: string) {
