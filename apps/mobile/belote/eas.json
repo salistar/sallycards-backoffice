@@ -1,0 +1,28 @@
+{
+  "cli": { "version": ">= 13.0.0" },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "ios": { "simulator": true }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_DEFAULT_ENV": "prod" }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": { "buildType": "app-bundle" },
+      "ios": { "image": "latest" },
+      "env": { "EXPO_PUBLIC_DEFAULT_ENV": "prod" }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": { "serviceAccountKeyPath": "./google-services.json", "track": "internal" },
+      "ios": { "appleId": "salistarcompany@gmail.com" }
+    }
+  }
+}
