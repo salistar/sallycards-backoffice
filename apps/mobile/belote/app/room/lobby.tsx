@@ -32,6 +32,7 @@ import { io, Socket } from 'socket.io-client';
 import AppHeader from '../../src/components/AppHeader';
 import { useTheme } from '../../src/contexts/AppProviders';
 import { logger } from '../../src/utils/logger';
+import P2PCall from '../../src/components/P2PCall';
 import * as api from '../../shared/api';
 import { getSocketUrl } from '../../shared/api';
 import { useTranslation } from 'react-i18next';
@@ -47,6 +48,7 @@ export default function LobbyScreen() {
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState(false);
   const [me, setMe] = useState<api.User | null>(null);
+  const [callOpen, setCallOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
   const isSimulated = simulated === '1' || !!room?.config?.isSimulated;
@@ -219,10 +221,54 @@ export default function LobbyScreen() {
       />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Appel audio/vidéo retiré (demande utilisateur) : le lobby ne sert plus
-            qu'au partage du code + liste des joueurs. */}
+        {/* Call panel — WebRTC P2P via TURN/STUN SALISTAR uniquement */}
+        {callOpen ? (
+          <View style={{ height: 420, margin: 12, borderRadius: 14, overflow: 'hidden' }}>
+            {(() => {
+              const peersForCall = (room.players || [])
+                .filter((p: any) => String(p.userId) !== String(me?.id))
+                .map((p: any) => ({
+                  userId: String(p.userId),
+                  username: p.username,
+                  isHost: !!p.isHost,
+                }));
+              return (
+                <P2PCall
+                  roomCode={room.code}
+                  displayName={me?.username || t('player')}
+                  authToken={api.getAuthToken() || ''}
+                  simulatedPeers={peersForCall}
+                  onClose={() => setCallOpen(false)}
+                />
+              );
+            })()}
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={() => setCallOpen(true)}
+            activeOpacity={0.85}
+            style={{ margin: 12, borderRadius: 16, overflow: 'hidden' }}
+          >
+            <LinearGradient
+              colors={['#7C3AED', '#EC4899']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+            >
+              <Ionicons name="videocam" size={28} color="#fff" />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#fff', fontSize: 15, fontFamily: 'Inter-Black', letterSpacing: 0.5 }}>
+                  Ouvrir l'appel audio/vidéo
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, fontFamily: 'Inter-SemiBold' }}>
+                  WebRTC P2P · TURN/STUN SALISTAR + signaling socket
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={22} color="#fff" />
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
 
-        {/* Avatars simples */}
+        {/* Avatars simples (la vidéo est gérée par <P2PCall /> WebRTC SALISTAR) */}
         <View style={styles.tilesGrid}>
           {room.players.map((p) => (
             <View key={p.userId} style={[styles.tile, { borderColor: palette.border }]}>

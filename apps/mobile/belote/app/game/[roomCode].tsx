@@ -32,6 +32,8 @@ import * as Haptics from 'expo-haptics';
 import { io, Socket } from 'socket.io-client';
 import AppHeader from '../../src/components/AppHeader';
 import AnimatedCard from '../../src/components/AnimatedCard';
+import P2PCall from '../../src/components/P2PCall';
+import Chat from '../../src/components/Chat';
 import { useTheme } from '../../src/contexts/AppProviders';
 import { logger } from '../../src/utils/logger';
 import { APP_CONFIG } from '../../src/config/app.config';
@@ -88,6 +90,7 @@ export default function BeloteRoomScreen() {
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [connected, setConnected] = useState(false);
   const [showQuit, setShowQuit] = useState(false);
+  const [panel, setPanel] = useState<'none' | 'voice' | 'chat'>('none');
   const socketRef = useRef<Socket | null>(null);
   const tokenRef = useRef<string | null>(api.getAuthToken());
 
@@ -191,6 +194,28 @@ export default function BeloteRoomScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.body}>
+        {/* Comms : appel audio/vidéo + chat — parité avec le plateau web */}
+        <View style={styles.commsRow}>
+          <TouchableOpacity onPress={() => setPanel(panel === 'voice' ? 'none' : 'voice')} style={[styles.commsBtn, panel === 'voice' && styles.commsBtnActive]}>
+            <Ionicons name="videocam" size={16} color="#fff" />
+            <Text style={styles.commsBtnText}>Appel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setPanel(panel === 'chat' ? 'none' : 'chat')} style={[styles.commsBtn, panel === 'chat' && styles.commsBtnActive]}>
+            <Ionicons name="chatbubbles" size={16} color="#fff" />
+            <Text style={styles.commsBtnText}>Chat</Text>
+          </TouchableOpacity>
+        </View>
+        {panel === 'voice' && (
+          <View style={styles.commsPanel}>
+            <P2PCall roomCode={code} displayName={me?.name ?? 'Joueur'} authToken={api.getAuthToken() ?? ''} onClose={() => setPanel('none')} />
+          </View>
+        )}
+        {panel === 'chat' && (
+          <View style={{ marginBottom: 12 }}>
+            <Chat roomId={`belote-${code}`} token={api.getAuthToken()} onClose={() => setPanel('none')} />
+          </View>
+        )}
+
         {/* Scoreboard + atout */}
         <View style={styles.scoreRow}>
           <ScorePill label="Votre équipe" value={snap?.teamScores[myTeam] ?? 0} accent={iWin} palette={palette} />
@@ -371,6 +396,11 @@ function createStyles(palette: ReturnType<typeof useTheme>['palette']) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: palette.bg },
     body: { padding: 14, paddingBottom: 40 },
+    commsRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+    commsBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+    commsBtnActive: { backgroundColor: 'rgba(124,58,237,0.35)', borderColor: '#A78BFA' },
+    commsBtnText: { color: '#fff', fontFamily: 'Inter-Bold', fontSize: 13 },
+    commsPanel: { height: 380, marginBottom: 12, borderRadius: 14, overflow: 'hidden' },
     scoreRow: { flexDirection: 'row', gap: 10, marginBottom: 12, alignItems: 'stretch' },
     trumpBox: { flex: 1, justifyContent: 'center', alignItems: 'flex-end' },
     trumpText: { fontSize: 12, fontFamily: 'Inter-SemiBold', textAlign: 'right' },
