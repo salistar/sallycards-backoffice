@@ -13,6 +13,7 @@ import type { Card } from './engines/_genericTableau';
 import type { MazeGameState, MazeAction } from './engines/_mazeEngine';
 import { cardImage } from './cards';
 import { loadVariant } from './registry';
+import { solvableMaze } from './solvableGen';
 
 const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
 
@@ -20,7 +21,7 @@ export default function MazeBoard({ variantKey, label }: { variantKey: string; l
   const reducerRef = useRef<(s: MazeGameState, a: MazeAction) => MazeGameState>((s) => s);
   const [st, setSt] = useState<MazeGameState | null>(null);
   const [sel, setSel] = useState<{ r: number; c: number } | null>(null);
-  const fresh = () => { const l = loadVariant(variantKey); if (!l) return; reducerRef.current = l.reducer; setSt(l.state); setSel(null); };
+  const fresh = () => { const l = loadVariant(variantKey); if (!l) return; reducerRef.current = l.reducer; setSt(solvableMaze(l.state.config)); setSel(null); };
   useEffect(fresh, [variantKey]);
   if (!st) return null;
 
