@@ -90,7 +90,8 @@ export default function BeloteRoomScreen() {
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [connected, setConnected] = useState(false);
   const [showQuit, setShowQuit] = useState(false);
-  const [panel, setPanel] = useState<'none' | 'voice' | 'chat'>('none');
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const tokenRef = useRef<string | null>(api.getAuthToken());
 
@@ -194,25 +195,28 @@ export default function BeloteRoomScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.body}>
-        {/* Comms : appel audio/vidéo + chat — parité avec le plateau web */}
+        {/* Comms : appel audio/vidéo + chat INDÉPENDANTS (les deux en même temps
+            possible) — parité avec le plateau web. */}
         <View style={styles.commsRow}>
-          <TouchableOpacity onPress={() => setPanel(panel === 'voice' ? 'none' : 'voice')} style={[styles.commsBtn, panel === 'voice' && styles.commsBtnActive]}>
+          <TouchableOpacity onPress={() => setVoiceOpen((v) => !v)} style={[styles.commsBtn, voiceOpen && styles.commsBtnActive]}>
             <Ionicons name="videocam" size={16} color="#fff" />
             <Text style={styles.commsBtnText}>Appel</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setPanel(panel === 'chat' ? 'none' : 'chat')} style={[styles.commsBtn, panel === 'chat' && styles.commsBtnActive]}>
+          <TouchableOpacity onPress={() => setChatOpen((v) => !v)} style={[styles.commsBtn, chatOpen && styles.commsBtnActive]}>
             <Ionicons name="chatbubbles" size={16} color="#fff" />
             <Text style={styles.commsBtnText}>Chat</Text>
           </TouchableOpacity>
         </View>
-        {panel === 'voice' && (
-          <View style={styles.commsPanel}>
-            <P2PCall roomCode={code} displayName={me?.name ?? 'Joueur'} authToken={api.getAuthToken() ?? ''} onClose={() => setPanel('none')} />
+        {voiceOpen && (
+          <View style={{ marginBottom: 12 }}>
+            {/* compact = MA vignette + celles des AUTRES participants (mesh WebRTC),
+                sur une rangée — n'écrase pas la table. */}
+            <P2PCall compact roomCode={code} displayName={me?.name ?? 'Joueur'} authToken={api.getAuthToken() ?? ''} onClose={() => setVoiceOpen(false)} />
           </View>
         )}
-        {panel === 'chat' && (
+        {chatOpen && (
           <View style={{ marginBottom: 12 }}>
-            <Chat roomId={`belote-${code}`} token={api.getAuthToken()} onClose={() => setPanel('none')} />
+            <Chat roomId={`belote-${code}`} token={api.getAuthToken()} onClose={() => setChatOpen(false)} />
           </View>
         )}
 
@@ -400,7 +404,7 @@ function createStyles(palette: ReturnType<typeof useTheme>['palette']) {
     commsBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 10, backgroundColor: APP_CONFIG.primary },
     commsBtnActive: { backgroundColor: '#7C3AED' },
     commsBtnText: { color: '#fff', fontFamily: 'Inter-Bold', fontSize: 14 },
-    commsPanel: { height: 380, marginBottom: 12, borderRadius: 14, overflow: 'hidden' },
+    commsPanel: { height: 470, marginBottom: 12, borderRadius: 14, overflow: 'hidden' },
     scoreRow: { flexDirection: 'row', gap: 10, marginBottom: 12, alignItems: 'stretch' },
     trumpBox: { flex: 1, justifyContent: 'center', alignItems: 'flex-end' },
     trumpText: { fontSize: 12, fontFamily: 'Inter-SemiBold', textAlign: 'right' },
