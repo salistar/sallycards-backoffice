@@ -13,6 +13,7 @@ import type { PairsGameState, PairsAction, CardLocation } from './engines/_gener
 import { isAccessible } from './engines/_genericPairs';
 import { PlayingCard, CardBackView } from './CardView';
 import { loadVariant } from './registry';
+import { solvablePairs } from './solvableGen';
 
 const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
 
@@ -21,7 +22,7 @@ export default function PairsBoard({ variantKey, label }: { variantKey: string; 
   const [st, setSt] = useState<PairsGameState | null>(null);
   const [secs, setSecs] = useState(0);
 
-  const fresh = () => { const l = loadVariant(variantKey); if (!l) return; reducerRef.current = l.reducer; setSt(l.state); setSecs(0); };
+  const fresh = () => { const l = loadVariant(variantKey); if (!l) return; reducerRef.current = l.reducer; setSt(solvablePairs(l.state.config)); setSecs(0); };
   useEffect(fresh, [variantKey]);
   useEffect(() => { if (!st || st.won) return; const t = setInterval(() => setSecs((s) => s + 1), 1000); return () => clearInterval(t); }, [st]);
 
