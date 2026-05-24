@@ -7,12 +7,11 @@
  */
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import type { PairsGameState, PairsAction, CardLocation } from './engines/_genericPairs';
 import { isAccessible } from './engines/_genericPairs';
-import { cardImage, CARD_BACK } from './cards';
+import { PlayingCard, CardBackView } from './CardView';
 import { loadVariant } from './registry';
 
 const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
@@ -38,10 +37,8 @@ export default function PairsBoard({ variantKey, label }: { variantKey: string; 
     const acc = isAccessible(loc, st);
     const selected = selKey === JSON.stringify(loc);
     return (
-      <button onClick={() => dispatch({ type: 'SELECT', loc })} disabled={!acc} style={{ border: 'none', background: 'transparent', padding: 0, cursor: acc ? 'pointer' : 'default', opacity: acc ? 1 : 0.55 }}>
-        <span style={{ display: 'block', borderRadius: 5, overflow: 'hidden', boxShadow: selected ? `0 0 0 3px ${GOLD}` : '0 2px 5px rgba(0,0,0,0.4)' }}>
-          <Image src={cardImage(card)} alt="" width={W} height={H} style={{ display: 'block', width: W, height: H }} />
-        </span>
+      <button onClick={() => dispatch({ type: 'SELECT', loc })} disabled={!acc} style={{ border: 'none', background: 'transparent', padding: 0, cursor: acc ? 'pointer' : 'default' }}>
+        <PlayingCard card={card} w={W} h={H} sel={selected} dim={!acc} />
       </button>
     );
   };
@@ -81,7 +78,7 @@ export default function PairsBoard({ variantKey, label }: { variantKey: string; 
         {cfg.stockEnabled && (
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center', marginTop: 16 }}>
             <button onClick={() => dispatch(st.stock.length > 0 ? { type: 'DRAW_STOCK' } : { type: 'RECYCLE_WASTE' })} style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer' }}>
-              {st.stock.length > 0 ? <span style={{ display: 'block', borderRadius: 5, overflow: 'hidden' }}><Image src={CARD_BACK} alt="" width={W} height={H} style={{ display: 'block', width: W, height: H }} /></span> : <div style={{ width: W, height: H, borderRadius: 6, border: '1px dashed rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>↻</div>}
+              {st.stock.length > 0 ? <CardBackView w={W} h={H} /> : <div style={{ width: W, height: H, borderRadius: 6, border: '1px dashed rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>↻</div>}
             </button>
             <div style={{ textAlign: 'center' }}>
               {st.waste.length > 0 ? <Slot card={st.waste[st.waste.length - 1]} loc={{ kind: 'waste' }} /> : <div style={{ width: W, height: H, borderRadius: 6, border: '1px dashed rgba(255,255,255,0.18)' }} />}

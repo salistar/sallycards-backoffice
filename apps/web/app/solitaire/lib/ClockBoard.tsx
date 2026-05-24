@@ -7,11 +7,10 @@
  */
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Play, FastForward } from 'lucide-react';
 import type { DistributionGameState, DistributionAction } from './engines/_genericDistribution';
-import { cardImage, CARD_BACK } from './cards';
+import { PlayingCard, CardBackView, EmptySlot } from './CardView';
 import { loadVariant } from './registry';
 
 const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
@@ -49,8 +48,8 @@ export default function ClockBoard({ variantKey, label }: { variantKey: string; 
             return (
               <div key={i} style={{ textAlign: 'center' }}>
                 <div style={{ position: 'relative', width: W, height: H, margin: '0 auto', boxShadow: isCur ? `0 0 0 3px ${GOLD}` : 'none', borderRadius: 6 }}>
-                  {pile.length === 0 ? <div style={{ width: W, height: H, borderRadius: 6, border: '1px dashed rgba(255,255,255,0.2)' }} />
-                    : top && top.faceUp ? <Img src={cardImage(top)} w={W} h={H} /> : <Img src={CARD_BACK} w={W} h={H} />}
+                  {pile.length === 0 ? <EmptySlot w={W} h={H} />
+                    : top && top.faceUp ? <PlayingCard card={top} w={W} h={H} sel={!!isCur} /> : <CardBackView w={W} h={H} />}
                 </div>
                 <div style={{ color: center ? GOLD : BLUE, fontSize: '0.62rem', marginTop: 3 }}>{center ? 'centre' : `${i + 1}h`} · {pile.length}</div>
               </div>
@@ -69,6 +68,5 @@ export default function ClockBoard({ variantKey, label }: { variantKey: string; 
     </div>
   );
 }
-function Img({ src, w, h }: { src: string; w: number; h: number }) { return <span style={{ display: 'block', borderRadius: 5, overflow: 'hidden' }}><Image src={src} alt="" width={w} height={h} style={{ display: 'block', width: w, height: h }} /></span>; }
 const ic: React.CSSProperties = { width: 14, height: 14 };
 const ctrl: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem' };
