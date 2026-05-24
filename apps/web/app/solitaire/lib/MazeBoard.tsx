@@ -8,9 +8,10 @@
 
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Lightbulb } from 'lucide-react';
 import type { Card } from './engines/_genericTableau';
 import type { MazeGameState, MazeAction } from './engines/_mazeEngine';
+import { listFillableHoles } from './engines/_mazeEngine';
 import { cardImage } from './cards';
 import { loadVariant } from './registry';
 import { solvableMaze } from './solvableGen';
@@ -25,11 +26,19 @@ export default function MazeBoard({ variantKey, label }: { variantKey: string; l
   useEffect(fresh, [variantKey]);
   if (!st) return null;
 
-  const W = 40, H = 57;
+  const W = 48, H = 68;
   const click = (r: number, c: number) => {
     const cell = st.grid[r][c];
     if (cell) { setSel({ r, c }); return; }
     if (sel) { setSt((s) => (s ? reducerRef.current(s, { type: 'MOVE', fromRow: sel.r, fromCol: sel.c, toRow: r, toCol: c }) : s)); setSel(null); }
+  };
+  // Indice : trouve une carte qui peut remplir un trou et joue le coup.
+  const hint = () => {
+    for (let r = 0; r < st.config.rows; r++) for (let c = 0; c < st.config.cols; c++) {
+      const card = st.grid[r][c]; if (!card) continue;
+      const holes = listFillableHoles(st, card);
+      if (holes.length) { const [tr, tc] = holes[0]; setSel(null); setSt((s) => (s ? reducerRef.current(s, { type: 'MOVE', fromRow: r, fromCol: c, toRow: tr, toCol: tc }) : s)); return; }
+    }
   };
 
   return (
@@ -38,6 +47,7 @@ export default function MazeBoard({ variantKey, label }: { variantKey: string; l
         <h2 style={{ color: '#fff', fontWeight: 900, fontSize: '1.05rem' }}>{label}</h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: BLUE, fontSize: '0.8rem' }}>
           <span>{st.moveCount} coups</span>
+          <button onClick={hint} style={ctrl}><Lightbulb style={{ width: 14, height: 14 }} /> Indice</button>
           <button onClick={fresh} style={{ ...ctrl, background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: '#0A1535', border: 'none' }}><RefreshCw style={{ width: 14, height: 14 }} /> Nouvelle</button>
         </div>
       </div>

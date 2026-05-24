@@ -24,7 +24,7 @@ export default function PlayVariant() {
 
   return (
     <main style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${NAVY}, #07112a)`, padding: '18px 14px 50px' }}>
-      <div style={{ maxWidth: 980, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1180, margin: '0 auto' }}>
         <Link href="/solitaire" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: BLUE, textDecoration: 'none', fontWeight: 700, fontSize: '0.85rem', marginBottom: 14 }}><ArrowLeft style={{ width: 16, height: 16 }} /> Toutes les variantes</Link>
         {!info ? (
           <div style={{ color: '#fff', textAlign: 'center', padding: 40 }}>Variante inconnue. <Link href="/solitaire" style={{ color: BLUE }}>Retour</Link></div>

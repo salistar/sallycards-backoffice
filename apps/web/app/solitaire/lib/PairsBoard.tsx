@@ -8,9 +8,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Lightbulb } from 'lucide-react';
 import type { PairsGameState, PairsAction, CardLocation } from './engines/_genericPairs';
-import { isAccessible } from './engines/_genericPairs';
+import { isAccessible, listAccessibleLocations, getCardAt, arePair, canRemoveSingle } from './engines/_genericPairs';
 import { PlayingCard, CardBackView } from './CardView';
 import { loadVariant } from './registry';
 import { solvablePairs } from './solvableGen';
@@ -31,7 +31,16 @@ export default function PairsBoard({ variantKey, label }: { variantKey: string; 
   const dispatch = (a: PairsAction) => setSt((s) => (s ? reducerRef.current(s, a) : s));
   const selKey = st.selected ? JSON.stringify(st.selected) : '';
   const isColumns = cfg.layoutKind === 'columns';
-  const W = 46, H = 66;
+  const W = 56, H = 80;
+
+  // Indice : retire une paire/un singleton accessible, sinon pioche/recycle.
+  const hint = () => {
+    const acc = listAccessibleLocations(st);
+    for (const loc of acc) { const c = getCardAt(loc, st); if (c && canRemoveSingle(c, cfg)) { dispatch({ type: 'TRY_REMOVE_SINGLE', loc }); return; } }
+    for (let i = 0; i < acc.length; i++) for (let j = i + 1; j < acc.length; j++) { const a = getCardAt(acc[i], st), b = getCardAt(acc[j], st); if (a && b && arePair(a, b, cfg)) { dispatch({ type: 'TRY_REMOVE_PAIR', a: acc[i], b: acc[j] }); return; } }
+    if (st.stock.length > 0) { dispatch({ type: 'DRAW_STOCK' }); return; }
+    dispatch({ type: 'RECYCLE_WASTE' });
+  };
 
   const Slot = ({ card, loc }: { card: any; loc: CardLocation }) => {
     if (!card) return <div style={{ width: W, height: H, borderRadius: 6, border: '1px dashed rgba(255,255,255,0.12)' }} />;
@@ -51,6 +60,7 @@ export default function PairsBoard({ variantKey, label }: { variantKey: string; 
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: BLUE, fontSize: '0.8rem' }}>
           <span>⏱ {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}</span>
           <span>· {st.removed.length} retirées</span>
+          <button onClick={hint} style={ctrl}><Lightbulb style={{ width: 14, height: 14 }} /> Indice</button>
           <button onClick={fresh} style={{ ...ctrl, background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: '#0A1535', border: 'none' }}><RefreshCw style={{ width: 14, height: 14 }} /> Nouvelle</button>
         </div>
       </div>
@@ -61,7 +71,7 @@ export default function PairsBoard({ variantKey, label }: { variantKey: string; 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
             {st.layout.map((column, c) => (
               <div key={c} style={{ position: 'relative', width: W, minHeight: H }}>
-                {column.map((card, i) => <div key={i} style={{ position: 'absolute', top: i * 20, left: 0 }}><Slot card={card} loc={{ kind: 'layout', row: c, col: i }} /></div>)}
+                {column.map((card, i) => <div key={i} style={{ position: 'absolute', top: i * 26, left: 0 }}><Slot card={card} loc={{ kind: 'layout', row: c, col: i }} /></div>)}
               </div>
             ))}
           </div>
