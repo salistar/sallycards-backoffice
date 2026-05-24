@@ -11,9 +11,11 @@ import type { SpiderState } from './spider';
 
 const API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1').replace(/\/$/, '');
 
-/** Variantes canoniques couvertes par deal_seeds (donnes résolubles garanties). */
-export const SOLVABLE_TABLEAU = new Set(['klondike-1', 'klondike-3', 'klondike-vegas', 'freecell', 'yukon', 'forty-thieves']);
-export const SOLVABLE_SPIDER = new Set(['spider-1', 'spider-2', 'spider-4']);
+/** Variantes dont la donne API est COMPLÈTE & déjà distribuée (donc directement
+ *  chargeable et résoluble). Les autres (Klondike, Spider 2/4…) stockent le
+ *  paquet pré-distribution pour les moteurs mobiles → repli sur donne aléatoire. */
+export const SOLVABLE_TABLEAU = new Set(['freecell', 'yukon']);
+export const SOLVABLE_SPIDER = new Set(['spider-1']);
 
 const SUIT_MAP: Record<string, 'S' | 'H' | 'D' | 'C'> = { spades: 'S', hearts: 'H', diamonds: 'D', clubs: 'C' };
 function conv(c: any, faceUp?: boolean): Card { return { id: c.id || `${c.value}${SUIT_MAP[c.suit] || 'S'}`, suit: SUIT_MAP[c.suit] || (c.suit as any), rank: (c.value ?? c.rank) as Rank, faceUp: faceUp ?? !!c.faceUp }; }
@@ -30,7 +32,14 @@ async function fetchDeal(variant: string): Promise<any | null> {
   } catch { return null; }
 }
 
-/** Donne résoluble convertie pour la famille tableau (Klondike/FreeCell/Yukon/Forty Thieves). */
+/** Rend tous les ids uniques (les jeux à 2 paquets ont des ids dupliqués). */
+function uniquify(piles: (Card | null)[][]): void {
+  let n = 0;
+  for (const pile of piles) for (const c of pile) if (c) c.id = `${c.id}#${n++}`;
+}
+
+/** Donne résoluble convertie pour la famille tableau (FreeCell/Forty Thieves/Yukon…
+ *  uniquement si la donne API est COMPLÈTE et DÉJÀ DISTRIBUÉE — sinon repli aléatoire). */
 export async function solvableTableau(variant: string, cfg: TableauConfig): Promise<GameState | null> {
   if (!SOLVABLE_TABLEAU.has(variant)) return null;
   const api = await fetchDeal(variant);
@@ -41,6 +50,11 @@ export async function solvableTableau(variant: string, cfg: TableauConfig): Prom
     const freeCells: (Card | null)[] = Array.from({ length: cfg.freeCells }, (_, i) => { const c = (api.freeCells || [])[i]; return c ? conv(c, true) : null; });
     const stock: Card[] = cardsOf(api.stock).map((c: any) => conv(c, false));
     const waste: Card[] = cardsOf(api.waste).map((c: any) => conv(c, true));
+    // Validation : la donne doit être DISTRIBUÉE (tableau non vide) et complète.
+    const tabCount = tableau.reduce((n, c) => n + c.length, 0);
+    const total = tabCount + stock.length + waste.length + freeCells.filter(Boolean).length + foundations.reduce((n, c) => n + c.length, 0);
+    if (tabCount === 0 || total !== cfg.decks * 52) return null;
+    uniquify([...tableau, foundations.flat(), stock, waste, freeCells.filter(Boolean) as Card[]]);
     return { config: cfg, tableau, freeCells, reserves: [], foundations, stock, waste, foundationBaseRankResolved: (cfg.foundationBaseRank === 'variable' ? 1 : cfg.foundationBaseRank) as Rank, stockRecyclesUsed: 0, tableauRedealsUsed: 0, moveCount: 0, history: [], won: false, lost: false };
   } catch { return null; }
 }
@@ -55,7 +69,10 @@ export async function solvableSpider(variant: string, base: SpiderState): Promis
     if (!Array.isArray(cols)) return null;
     const columns: Card[][] = cols.map((col: any) => cardsOf(col).map((c: any) => conv(c, c.faceUp)));
     columns.forEach((c) => { if (c.length && !c[c.length - 1].faceUp) c[c.length - 1].faceUp = true; });
-    const stockFlat = cardsOf(api.stock).map((c: any) => conv(c, false));
+    const stockFlat: Card[] = cardsOf(api.stock).map((c: any) => conv(c, false));
+    const colCount = columns.reduce((n, c) => n + c.length, 0);
+    if (colCount === 0 || colCount + stockFlat.length !== 104) return null; // donne non distribuée → repli aléatoire
+    uniquify([...columns, stockFlat]);
     const stock: Card[][] = [];
     for (let i = 0; i < stockFlat.length; i += 10) stock.push(stockFlat.slice(i, i + 10));
     return { ...base, columns, stock, completed: 0, moveCount: 0, won: false };
