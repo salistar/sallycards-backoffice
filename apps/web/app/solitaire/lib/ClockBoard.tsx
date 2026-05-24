@@ -36,7 +36,7 @@ export default function ClockBoard({ variantKey, label }: { variantKey: string; 
 
   const step = () => setSt((s) => (s ? reducerRef.current(s, { type: 'REVEAL_AND_PLACE' }) : s));
   const auto = () => { let cur = st; for (let i = 0; i < 200 && !cur.won && !cur.lost; i++) cur = reducerRef.current(cur, { type: 'REVEAL_AND_PLACE' }); setSt(cur); };
-  const W = 42, H = 60;
+  const W = 52, H = 74;
   const clockN = st.config.clockPiles;
 
   return (
@@ -45,14 +45,14 @@ export default function ClockBoard({ variantKey, label }: { variantKey: string; 
         <h2 style={{ color: '#fff', fontWeight: 900, fontSize: '1.05rem' }}>{label}</h2>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: BLUE, fontSize: '0.8rem' }}>
           <span>{st.exposedCount} cartes révélées · {st.moveCount} coups</span>
-          <button onClick={step} disabled={st.won || st.lost} style={ctrl}><Play style={ic} /> Retourner</button>
+          <button onClick={step} disabled={st.won || st.lost} style={ctrl}><Play style={ic} /> Indice</button>
           <button onClick={auto} disabled={st.won || st.lost} style={ctrl}><FastForward style={ic} /> Auto</button>
           <button onClick={fresh} style={{ ...ctrl, background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: '#0A1535', border: 'none' }}><RefreshCw style={ic} /> Nouvelle</button>
         </div>
       </div>
 
       <div style={{ background: `radial-gradient(circle at 50% 50%, ${FELT}, #093d24)`, borderRadius: 18, border: '5px solid #5b3a1a', padding: 18 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(58px, 1fr))', gap: 10, justifyItems: 'center' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(66px, 1fr))', gap: 10, justifyItems: 'center' }}>
           {st.piles.map((pile, i) => {
             const top = pile[pile.length - 1];
             const center = st.config.hasCenterPile && i === clockN;

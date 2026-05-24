@@ -8,7 +8,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { RefreshCw, Undo2, Sparkles } from 'lucide-react';
+import { RefreshCw, Undo2, Sparkles, Lightbulb } from 'lucide-react';
 import type { GameState, Action, Card } from './engines/_genericTableau';
 import { PlayingCard, CardBackView, EmptySlot } from './CardView';
 import { loadVariant } from './registry';
@@ -50,6 +50,24 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
     return false;
   };
   const undo = () => setHist((h) => { if (h.length === 0) return h; setSt(h[h.length - 1]); setSel(null); return h.slice(0, -1); });
+
+  // Indice : joue UN coup utile (fondation > pose vers tableau > déplacement qui
+  // révèle/libère > pioche/recyclage). Garantit qu'une action se produit.
+  const hint = () => {
+    const tries: Action[] = [];
+    if (st.waste.length) st.foundations.forEach((_, fi) => tries.push({ type: 'WASTE_TO_FOUNDATION', foundation: fi }));
+    st.freeCells.forEach((c, ci) => { if (c) st.foundations.forEach((_, fi) => tries.push({ type: 'FREECELL_TO_FOUNDATION', cell: ci, foundation: fi })); });
+    st.reserves.forEach((p, ri) => { if (p.length) st.foundations.forEach((_, fi) => tries.push({ type: 'RESERVE_TO_FOUNDATION', reserve: ri, foundation: fi })); });
+    st.tableau.forEach((p, col) => { if (p.length) st.foundations.forEach((_, fi) => tries.push({ type: 'TABLEAU_TO_FOUNDATION', from: col, foundation: fi })); });
+    if (st.waste.length) st.tableau.forEach((_, to) => tries.push({ type: 'WASTE_TO_TABLEAU', to }));
+    st.freeCells.forEach((c, ci) => { if (c) st.tableau.forEach((_, to) => tries.push({ type: 'FREECELL_TO_TABLEAU', cell: ci, to })); });
+    st.reserves.forEach((p, ri) => { if (p.length) st.tableau.forEach((_, to) => tries.push({ type: 'RESERVE_TO_TABLEAU', reserve: ri, to })); });
+    // déplacements tableau→tableau utiles (révèle une carte cachée ou libère une colonne)
+    st.tableau.forEach((p, from) => { for (let idx = 0; idx < p.length; idx++) { if (!p[idx].faceUp) continue; const useful = (idx > 0 && !p[idx - 1].faceUp) || idx === 0; if (!useful) continue; st.tableau.forEach((q, to) => { if (to !== from && q.length > 0) tries.push({ type: 'TABLEAU_TO_TABLEAU', from, cardIdx: idx, to }); }); } });
+    if (st.stock.length) tries.push({ type: 'DRAW_STOCK' });
+    tries.push({ type: 'RECYCLE_WASTE' });
+    for (const a of tries) { if (apply(a)) return; }
+  };
 
   // Auto-solveur : monte tout ce qui est jouable en fondation, et PIOCHE /
   // recycle quand rien n'est jouable → résout entièrement les donnes générées
@@ -106,7 +124,7 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
   const clickWaste = () => { if (sel) { setSel(null); return; } if (st.waste.length) setSel({ z: 'waste' }); };
 
   const selKey = sel ? JSON.stringify(sel) : '';
-  const W = 54, H = 77;
+  const W = 66, H = 94;
 
   return (
     <div>
@@ -116,6 +134,7 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
           <span>⏱ {Math.floor(secs / 60)}:{String(secs % 60).padStart(2, '0')}</span>
           <span>· {st.moveCount} coups</span>
           <button onClick={undo} disabled={!hist.length} style={ctrl}><Undo2 style={ic} /> Annuler</button>
+          <button onClick={hint} style={ctrl}><Lightbulb style={ic} /> Indice</button>
           <button onClick={autoCollect} style={ctrl}><Sparkles style={ic} /> Auto</button>
           <button onClick={fresh} style={{ ...ctrl, background: `linear-gradient(90deg, ${GOLD}, #F59E0B)`, color: '#0A1535', border: 'none' }}><RefreshCw style={ic} /> Nouvelle</button>
         </div>
@@ -186,7 +205,7 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
   );
 }
 
-function cumTop(pile: Card[], idx: number): number { let y = 0; for (let i = 1; i <= idx; i++) y += pile[i - 1].faceUp ? 22 : 9; return y; }
+function cumTop(pile: Card[], idx: number): number { let y = 0; for (let i = 1; i <= idx; i++) y += pile[i - 1].faceUp ? 27 : 11; return y; }
 function slot(w: number, h: number): React.CSSProperties { return { width: w, height: h, borderRadius: Math.round(w * 0.12), border: '1px dashed rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }; }
 function CardV({ card, sel, w, h }: { card: Card; sel?: boolean; w: number; h: number }) { return <PlayingCard card={card} w={w} h={h} sel={sel} />; }
 function Back({ w, h }: { w: number; h: number }) { return <CardBackView w={w} h={h} />; }
