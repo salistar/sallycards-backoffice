@@ -5,12 +5,11 @@
  */
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Undo2 } from 'lucide-react';
 import type { Card } from './engines/_genericTableau';
 import { createSpider, spiderReducer, isRun, SpiderState } from './spider';
-import { cardImage, CARD_BACK } from './cards';
+import { PlayingCard, CardBackView, EmptySlot } from './CardView';
 
 const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
 
@@ -36,7 +35,7 @@ export default function SpiderBoard({ suitMode, label }: { suitMode: 1 | 2 | 4; 
   };
   const clickCol = (col: number) => { if (sel) { apply({ type: 'MOVE', from: sel.col, cardIdx: sel.idx, to: col }); setSel(null); } };
 
-  const W = 44, H = 63;
+  const W = 50, H = 71;
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
@@ -49,7 +48,7 @@ export default function SpiderBoard({ suitMode, label }: { suitMode: 1 | 2 | 4; 
         </div>
       </div>
 
-      <div style={{ background: `radial-gradient(circle at 50% 0%, ${FELT}, #093d24)`, borderRadius: 18, border: '5px solid #5b3a1a', padding: 14, overflowX: 'auto' }}>
+      <div style={{ background: `radial-gradient(circle at 50% 0%, ${FELT}, #093d24)`, borderRadius: 18, border: '5px solid #5b3a1a', padding: 16, width: 'fit-content', maxWidth: '100%', margin: '0 auto', overflowX: 'auto' }}>
         <div style={{ display: 'flex', gap: 10, marginBottom: 12, alignItems: 'center' }}>
           <button onClick={() => apply({ type: 'DEAL' })} disabled={st.stock.length === 0} style={{ ...slot(W, H), cursor: st.stock.length ? 'pointer' : 'default', background: 'rgba(0,0,0,0.25)', border: 'none', padding: 0 }}>
             {st.stock.length > 0 ? <Back w={W} h={H} /> : <span style={{ color: '#fff' }}>∅</span>}
@@ -82,10 +81,10 @@ export default function SpiderBoard({ suitMode, label }: { suitMode: 1 | 2 | 4; 
   );
 }
 
-function cumTop(pile: Card[], idx: number): number { let y = 0; for (let i = 1; i <= idx; i++) y += pile[i - 1].faceUp ? 17 : 7; return y; }
-function slot(w: number, h: number): React.CSSProperties { return { width: w, height: h, borderRadius: 6, border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }; }
-function CardV({ card, sel, w, h }: { card: Card; sel?: boolean; w: number; h: number }) { return <span style={{ display: 'block', borderRadius: 5, overflow: 'hidden', boxShadow: sel ? `0 0 0 3px ${GOLD}` : '0 2px 5px rgba(0,0,0,0.4)' }}><Image src={cardImage(card)} alt="" width={w} height={h} style={{ display: 'block', width: w, height: h }} /></span>; }
-function Back({ w, h }: { w: number; h: number }) { return <span style={{ display: 'block', borderRadius: 5, overflow: 'hidden' }}><Image src={CARD_BACK} alt="" width={w} height={h} style={{ display: 'block', width: w, height: h }} /></span>; }
-function Empty({ w, h }: { w: number; h: number }) { return <div style={{ width: w, height: h, borderRadius: 6, border: '1px dashed rgba(255,255,255,0.25)' }} />; }
+function cumTop(pile: Card[], idx: number): number { let y = 0; for (let i = 1; i <= idx; i++) y += pile[i - 1].faceUp ? 21 : 9; return y; }
+function slot(w: number, h: number): React.CSSProperties { return { width: w, height: h, borderRadius: Math.round(w * 0.12), border: '1px dashed rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }; }
+function CardV({ card, sel, w, h }: { card: Card; sel?: boolean; w: number; h: number }) { return <PlayingCard card={card} w={w} h={h} sel={sel} />; }
+function Back({ w, h }: { w: number; h: number }) { return <CardBackView w={w} h={h} />; }
+function Empty({ w, h }: { w: number; h: number }) { return <EmptySlot w={w} h={h} />; }
 const ic: React.CSSProperties = { width: 14, height: 14 };
 const ctrl: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem' };

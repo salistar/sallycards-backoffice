@@ -7,11 +7,10 @@
  */
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Undo2, Sparkles } from 'lucide-react';
 import type { GameState, Action, Card } from './engines/_genericTableau';
-import { cardImage, CARD_BACK } from './cards';
+import { PlayingCard, CardBackView, EmptySlot } from './CardView';
 import { loadVariant } from './registry';
 
 const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
@@ -95,7 +94,7 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
   const clickWaste = () => { if (sel) { setSel(null); return; } if (st.waste.length) setSel({ z: 'waste' }); };
 
   const selKey = sel ? JSON.stringify(sel) : '';
-  const W = 46, H = 66;
+  const W = 54, H = 77;
 
   return (
     <div>
@@ -110,7 +109,7 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
         </div>
       </div>
 
-      <div style={{ background: `radial-gradient(circle at 50% 0%, ${FELT}, #093d24)`, borderRadius: 18, border: '5px solid #5b3a1a', padding: 14, overflowX: 'auto' }}>
+      <div style={{ background: `radial-gradient(circle at 50% 0%, ${FELT}, #093d24)`, borderRadius: 18, border: '5px solid #5b3a1a', padding: 16, width: 'fit-content', maxWidth: '100%', margin: '0 auto', overflowX: 'auto' }}>
         {/* Rangée du haut : pioche / défausse — cellules — fondations */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           {cfg.stockEnabled && (
@@ -175,12 +174,10 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
   );
 }
 
-function cumTop(pile: Card[], idx: number): number { let y = 0; for (let i = 1; i <= idx; i++) y += pile[i - 1].faceUp ? 18 : 7; return y; }
-function slot(w: number, h: number): React.CSSProperties { return { width: w, height: h, borderRadius: 6, border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }; }
-function CardV({ card, sel, w, h }: { card: Card; sel?: boolean; w: number; h: number }) {
-  return <span style={{ display: 'block', borderRadius: 5, overflow: 'hidden', boxShadow: sel ? `0 0 0 3px ${GOLD}` : '0 2px 5px rgba(0,0,0,0.4)' }}><Image src={cardImage(card)} alt="" width={w} height={h} style={{ display: 'block', width: w, height: h }} /></span>;
-}
-function Back({ w, h }: { w: number; h: number }) { return <span style={{ display: 'block', borderRadius: 5, overflow: 'hidden' }}><Image src={CARD_BACK} alt="" width={w} height={h} style={{ display: 'block', width: w, height: h }} /></span>; }
-function Empty({ w, h, label }: { w: number; h: number; label?: string }) { return <div style={{ width: w, height: h, borderRadius: 6, border: '1px dashed rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>{label || ''}</div>; }
+function cumTop(pile: Card[], idx: number): number { let y = 0; for (let i = 1; i <= idx; i++) y += pile[i - 1].faceUp ? 22 : 9; return y; }
+function slot(w: number, h: number): React.CSSProperties { return { width: w, height: h, borderRadius: Math.round(w * 0.12), border: '1px dashed rgba(255,255,255,0.28)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }; }
+function CardV({ card, sel, w, h }: { card: Card; sel?: boolean; w: number; h: number }) { return <PlayingCard card={card} w={w} h={h} sel={sel} />; }
+function Back({ w, h }: { w: number; h: number }) { return <CardBackView w={w} h={h} />; }
+function Empty({ w, h, label }: { w: number; h: number; label?: string }) { return <EmptySlot w={w} h={h} label={label} />; }
 const ic: React.CSSProperties = { width: 14, height: 14 };
 const ctrl: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.08)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 999, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem' };
