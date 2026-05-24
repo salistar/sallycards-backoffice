@@ -20,6 +20,7 @@ import {
 import VoiceCall from '../_voice';
 import Chat from '../../../games/Chat';
 import ChallengeLosers from '../../../games/ChallengeLosers';
+import { resolveGameToken, forceRefreshGameToken } from '../../../games/socketAuth';
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001';
 const NAVY = '#0A1535';
@@ -52,21 +53,38 @@ export default function RoomTable() {
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const socketRef = useRef<Socket | null>(null);
+  const tokenRef = useRef<string | null>(null);
 
   useEffect(() => {
-    setToken(typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null);
-  }, []);
-
-  useEffect(() => {
-    if (!token || !code) return;
-    const s = io(`${SOCKET_URL}/game`, { transports: ['websocket'], auth: { token } });
-    socketRef.current = s;
-    s.on('connect', () => { setConnected(true); s.emit('game:join', { roomCode: code }); });
-    s.on('disconnect', () => setConnected(false));
-    s.on('game:state', (snapshot: Snapshot) => setSnap(snapshot));
-    s.on('game:error', () => { /* ignore : géré par l'UI d'attente */ });
-    return () => { s.disconnect(); socketRef.current = null; };
-  }, [token, code]);
+    if (!code) return;
+    let cancelled = false;
+    (async () => {
+      // Token courant → refresh → session INVITÉ (jamais bloqué sur « connexion… »
+      // même sans login, comme les autres jeux web via socketAuth).
+      const t = await resolveGameToken();
+      if (cancelled) return;
+      tokenRef.current = t;
+      setToken(t);
+      // auth en FONCTION : socket.io relit tokenRef à chaque (re)connexion → un
+      // token rafraîchi est pris en compte sans recréer le socket.
+      const s = io(`${SOCKET_URL}/game`, {
+        transports: ['websocket'],
+        auth: (cb: (d: any) => void) => cb({ token: tokenRef.current }),
+      });
+      socketRef.current = s;
+      s.on('connect', () => { setConnected(true); s.emit('game:join', { roomCode: code, gameType: 'belote' }); });
+      s.on('disconnect', () => setConnected(false));
+      s.on('game:state', (snapshot: Snapshot) => setSnap(snapshot));
+      s.on('game:error', () => { /* ignore : géré par l'UI d'attente */ });
+      s.on('connect_error', async (e: any) => {
+        if (/token|auth|jwt|unauthor/i.test(e?.message || '')) {
+          const nt = await forceRefreshGameToken();
+          if (nt) { tokenRef.current = nt; setToken(nt); }
+        }
+      });
+    })();
+    return () => { cancelled = true; socketRef.current?.disconnect(); socketRef.current = null; };
+  }, [code]);
 
   const me = snap?.players.find((p) => p.id === snap.youId) || null;
   const mySeat = snap && me ? snap.players.indexOf(me) : -1;
