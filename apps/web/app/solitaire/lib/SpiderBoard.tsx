@@ -8,15 +8,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { RefreshCw, Undo2 } from 'lucide-react';
 import type { Card } from './engines/_genericTableau';
-import { createSpider, spiderReducer, isRun, SpiderState } from './spider';
+import { reverseSpider, spiderReducer, isRun, SpiderState } from './spider';
 import { PlayingCard, CardBackView, EmptySlot } from './CardView';
-import { solvableSpider } from './dealLoader';
-import { solvableSpiderGen } from './solvableGen';
 
 const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
 
 export default function SpiderBoard({ suitMode, label }: { suitMode: 1 | 2 | 4; label: string }) {
-  const [st, setSt] = useState<SpiderState>(() => createSpider(suitMode));
+  const [st, setSt] = useState<SpiderState>(() => reverseSpider(suitMode));
   const [sel, setSel] = useState<{ col: number; idx: number } | null>(null);
   const [hist, setHist] = useState<SpiderState[]>([]);
   const [secs, setSecs] = useState(0);
@@ -24,9 +22,8 @@ export default function SpiderBoard({ suitMode, label }: { suitMode: 1 | 2 | 4; 
   liveRef.current = st;
 
   const fresh = () => {
-    const gen = solvableSpiderGen(suitMode); // meilleur effort résoluble (generate-and-test)
-    setSt(gen); setSel(null); setHist([]); setSecs(0);
-    solvableSpider(`spider-${suitMode}`, gen).then((sv) => { if (sv) { setSt(sv); setSel(null); setHist([]); } }); // deal_seed authentique si dispo (spider-1)
+    // Donne GARANTIE résoluble (reverse-moves depuis l'état résolu).
+    setSt(reverseSpider(suitMode)); setSel(null); setHist([]); setSecs(0);
   };
   useEffect(fresh, [suitMode]);
   useEffect(() => { if (st.won) return; const t = setInterval(() => setSecs((s) => s + 1), 1000); return () => clearInterval(t); }, [st.won]);
