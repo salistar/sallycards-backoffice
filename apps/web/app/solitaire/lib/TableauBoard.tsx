@@ -13,6 +13,7 @@ import type { GameState, Action, Card } from './engines/_genericTableau';
 import { PlayingCard, CardBackView, EmptySlot } from './CardView';
 import { loadVariant } from './registry';
 import { solvableTableau } from './dealLoader';
+import { reverseTableau } from './solvableGen';
 
 const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
 type Sel = { z: 'tableau'; col: number; idx: number } | { z: 'waste' } | { z: 'free'; cell: number } | { z: 'reserve'; r: number } | null;
@@ -28,8 +29,9 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
     const l = loadVariant(variantKey);
     if (!l) return;
     reducerRef.current = l.reducer;
-    setSt(l.state); setSel(null); setHist([]); setSecs(0);
-    // Donne RÉSOLUBLE depuis l'API si la variante est couverte (remplace l'aléatoire).
+    // Donne GARANTIE RÉSOLUBLE (générique, toutes les variantes tableau).
+    setSt(reverseTableau(l.state.config)); setSel(null); setHist([]); setSecs(0);
+    // Si la variante a des donnes authentiques en base (deal_seeds), on les préfère.
     solvableTableau(variantKey, l.state.config).then((sv) => { if (sv) { setSt(sv); setSel(null); setHist([]); } });
   };
   useEffect(fresh, [variantKey]);
