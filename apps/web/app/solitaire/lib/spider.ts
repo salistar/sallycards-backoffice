@@ -70,6 +70,50 @@ function collect(st: SpiderState): SpiderState {
   return { ...st, columns, completed, won: completed >= 8 };
 }
 
+/**
+ * Donne Spider GARANTIE résoluble (reverse-moves depuis l'état résolu).
+ * On part de 8 suites K→A complètes (réparties en 8 colonnes), puis on applique
+ * N coups VALIDES aléatoires (sans collecte) pour fragmenter/mélanger. Comme
+ * l'inverse exact de ces coups ramène à l'état résolu — qui se collecte en 8
+ * suites = victoire — la donne admet une solution (il suffit de défaire les
+ * coups). Toutes faces visibles (le mouvement de suites nécessite de voir les
+ * cartes) ; pas de talon (les 104 cartes sont en colonnes).
+ */
+export function reverseSpider(suitMode: 1 | 2 | 4): SpiderState {
+  const suits: Suit[] = suitMode === 1 ? ['S'] : suitMode === 2 ? ['S', 'H'] : ['S', 'H', 'D', 'C'];
+  const runsPerSuit = 8 / suits.length; // 8 / 4 / 2
+  const columns: Card[][] = Array.from({ length: 10 }, () => []);
+  let n = 0, colIdx = 0;
+  for (const s of suits) for (let k = 0; k < runsPerSuit; k++) {
+    const run: Card[] = [];
+    for (let r = 13; r >= 1; r--) run.push({ id: `${r}${s}#${n++}`, suit: s, rank: r as Rank, faceUp: true });
+    columns[colIdx++] = run; // 8 suites complètes dans les colonnes 0..7
+  }
+  let cols = columns;
+  for (let i = 0; i < 80; i++) {
+    const cands: { from: number; idx: number; to: number }[] = [];
+    for (let a = 0; a < 10; a++) {
+      const pile = cols[a];
+      for (let idx = (a < 8 && pile.length === 13 ? 1 : 0); idx < pile.length; idx++) { // ne pas vider entièrement une suite source au 1er coup
+        const run = pile.slice(idx); if (!isRun(run)) continue;
+        for (let b = 0; b < 10; b++) {
+          if (b === a) continue;
+          const top = cols[b][cols[b].length - 1];
+          if (!top || top.rank === run[0].rank + 1) cands.push({ from: a, idx, to: b });
+        }
+      }
+    }
+    if (!cands.length) break;
+    const m = cands[Math.floor(Math.random() * cands.length)];
+    const next = cols.map((c) => c.slice());
+    const run = next[m.from].slice(m.idx);
+    next[m.from] = next[m.from].slice(0, m.idx);
+    next[m.to] = [...next[m.to], ...run];
+    cols = next;
+  }
+  return { suitMode, columns: cols, stock: [], completed: 0, moveCount: 0, won: false };
+}
+
 export function spiderReducer(st: SpiderState, a: SpiderAction): SpiderState {
   if (st.won) return st;
   if (a.type === 'DEAL') {
