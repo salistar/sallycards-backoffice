@@ -12,6 +12,7 @@ import { RefreshCw, Undo2, Sparkles } from 'lucide-react';
 import type { GameState, Action, Card } from './engines/_genericTableau';
 import { PlayingCard, CardBackView, EmptySlot } from './CardView';
 import { loadVariant } from './registry';
+import { solvableTableau } from './dealLoader';
 
 const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
 type Sel = { z: 'tableau'; col: number; idx: number } | { z: 'waste' } | { z: 'free'; cell: number } | { z: 'reserve'; r: number } | null;
@@ -28,6 +29,8 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
     if (!l) return;
     reducerRef.current = l.reducer;
     setSt(l.state); setSel(null); setHist([]); setSecs(0);
+    // Donne RÉSOLUBLE depuis l'API si la variante est couverte (remplace l'aléatoire).
+    solvableTableau(variantKey, l.state.config).then((sv) => { if (sv) { setSt(sv); setSel(null); setHist([]); } });
   };
   useEffect(fresh, [variantKey]);
   useEffect(() => {
@@ -149,7 +152,7 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
         {/* Tableau */}
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
           {st.tableau.map((pile, col) => (
-            <div key={'t' + col} onClick={() => pile.length === 0 && toTableau(col)} style={{ position: 'relative', width: W, minHeight: H, cursor: pile.length === 0 && sel ? 'pointer' : 'default' }}>
+            <div key={'t' + col} onClick={() => pile.length === 0 && toTableau(col)} style={{ position: 'relative', width: W, height: pile.length ? cumTop(pile, pile.length - 1) + H : H, cursor: pile.length === 0 && sel ? 'pointer' : 'default' }}>
               {pile.length === 0 && <Empty w={W} h={H} />}
               {pile.map((card, idx) => {
                 return (

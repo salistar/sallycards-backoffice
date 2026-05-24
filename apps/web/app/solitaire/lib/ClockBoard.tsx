@@ -18,7 +18,19 @@ const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
 export default function ClockBoard({ variantKey, label }: { variantKey: string; label: string }) {
   const reducerRef = useRef<(s: DistributionGameState, a: DistributionAction) => DistributionGameState>((s) => s);
   const [st, setSt] = useState<DistributionGameState | null>(null);
-  const fresh = () => { const l = loadVariant(variantKey); if (!l) return; reducerRef.current = l.reducer; setSt(l.state); };
+  const fresh = () => {
+    // Ces variantes (horloge) sont déterministes : on cherche une donne GAGNABLE
+    // en simulant la partie jusqu'au bout, pour garantir une solution.
+    const first = loadVariant(variantKey); if (!first) return; reducerRef.current = first.reducer;
+    let chosen = first.state;
+    for (let t = 0; t < 120; t++) {
+      const cand = loadVariant(variantKey); if (!cand) break;
+      let cur = cand.state;
+      for (let i = 0; i < 400 && !cur.won && !cur.lost; i++) cur = cand.reducer(cur, { type: 'REVEAL_AND_PLACE' });
+      if (cur.won) { chosen = cand.state; break; }
+    }
+    setSt(chosen);
+  };
   useEffect(fresh, [variantKey]);
   if (!st) return null;
 
