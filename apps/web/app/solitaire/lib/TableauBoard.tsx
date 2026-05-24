@@ -51,17 +51,24 @@ export default function TableauBoard({ variantKey, label }: { variantKey: string
   };
   const undo = () => setHist((h) => { if (h.length === 0) return h; setSt(h[h.length - 1]); setSel(null); return h.slice(0, -1); });
 
-  // Envoi automatique de toutes les cartes jouables vers les fondations.
+  // Auto-solveur : monte tout ce qui est jouable en fondation, et PIOCHE /
+  // recycle quand rien n'est jouable → résout entièrement les donnes générées
+  // (y compris celles avec pioche). Borné pour ne jamais bloquer l'UI.
   const autoCollect = () => {
-    let cur = st; let moved = true; const snapshots = [st];
-    while (moved) {
-      moved = false;
+    let cur = st; let guard = 0;
+    while (guard++ < 6000) {
       const tryActs: Action[] = [];
-      cur.waste.length && tryActs.push(...cur.foundations.map((_, fi) => ({ type: 'WASTE_TO_FOUNDATION', foundation: fi } as Action)));
+      if (cur.waste.length) cur.foundations.forEach((_, fi) => tryActs.push({ type: 'WASTE_TO_FOUNDATION', foundation: fi }));
       cur.freeCells.forEach((c, ci) => { if (c) cur.foundations.forEach((_, fi) => tryActs.push({ type: 'FREECELL_TO_FOUNDATION', cell: ci, foundation: fi })); });
       cur.reserves.forEach((p, ri) => { if (p.length) cur.foundations.forEach((_, fi) => tryActs.push({ type: 'RESERVE_TO_FOUNDATION', reserve: ri, foundation: fi })); });
       cur.tableau.forEach((p, col) => { if (p.length) cur.foundations.forEach((_, fi) => tryActs.push({ type: 'TABLEAU_TO_FOUNDATION', from: col, foundation: fi })); });
-      for (const a of tryActs) { const ns = reducerRef.current(cur, a); if (ns !== cur) { cur = ns; moved = true; break; } }
+      let acted = false;
+      for (const a of tryActs) { const ns = reducerRef.current(cur, a); if (ns !== cur) { cur = ns; acted = true; break; } }
+      if (acted) continue;
+      if (cur.won) break;
+      if (cur.stock.length > 0) { const ns = reducerRef.current(cur, { type: 'DRAW_STOCK' }); if (ns !== cur) { cur = ns; continue; } }
+      const rec = reducerRef.current(cur, { type: 'RECYCLE_WASTE' }); if (rec !== cur) { cur = rec; continue; }
+      break;
     }
     if (cur !== st) { setHist((h) => [...h.slice(-60), st]); setSt(cur); setSel(null); }
   };

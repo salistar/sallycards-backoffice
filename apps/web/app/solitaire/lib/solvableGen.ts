@@ -30,26 +30,39 @@ function allCards(decks: number): Card[] {
   return out;
 }
 
-/** Donne tableau garantie résoluble (toutes faces visibles, pas de pioche). */
+/**
+ * Donne tableau GARANTIE résoluble, AUTHENTIQUE : vraie pioche + cartes cachées
+ * pour les variantes à pioche recyclable (Klondike…). On dé-joue rang 13→1 ;
+ * chaque carte va sur une colonne (jusqu'à sa taille de distribution) ou, en
+ * surplus, à la PIOCHE. Colonnes décroissantes ⇒ toute carte tableau de rang r
+ * est dégagée après les rangs < r ; toute carte de pioche est jouable (recyclage
+ * illimité) au moment voulu. Donc résoluble entièrement (récurrence).
+ */
 export function reverseTableau(cfg: TableauConfig): GameState {
   const N = Math.max(1, cfg.tableauColumns);
+  const useStock = cfg.stockEnabled && cfg.stockRecycle === 'unlimited';
+  const targets = useStock ? Array.from({ length: N }, (_, i) => cfg.tableauDealPattern[i] ?? 0) : null;
   const byRank: Record<number, Card[]> = {};
   for (const c of allCards(cfg.decks)) (byRank[c.rank] ??= []).push(c);
   const tableau: Card[][] = Array.from({ length: N }, () => []);
-  let col = 0;
-  for (let r = 13; r >= 1; r--) for (const c of shuffle(byRank[r] || [])) { tableau[col % N].push(c); col++; }
-  // Cartes cachées selon la config (look authentique : seules les cartes du haut
-  // sont visibles). La solution reste valide : le reducer retourne le nouveau
-  // sommet à chaque retrait → l'« Auto » résout quand même la donne.
-  for (const pile of tableau) {
-    const len = pile.length;
-    pile.forEach((c, idx) => { const fromBottom = len - 1 - idx; c.faceUp = cfg.tableauFaceUpFromBottom === 'all' || fromBottom < (cfg.tableauFaceUpFromBottom as number); });
+  const stock: Card[] = [];
+  let cur = 0;
+  for (let r = 13; r >= 1; r--) for (const c of shuffle(byRank[r] || [])) {
+    if (targets) {
+      let placed = false;
+      for (let k = 0; k < N; k++) { const cc = (cur + k) % N; if (tableau[cc].length < targets[cc]) { tableau[cc].push(c); cur = cc + 1; placed = true; break; } }
+      if (!placed) stock.push(c); // surplus → pioche
+    } else { tableau[cur % N].push(c); cur++; }
   }
+  // Faces cachées selon la config (le reducer retourne le sommet à chaque retrait
+  // → l'auto-solveur résout quand même).
+  for (const pile of tableau) { const len = pile.length; pile.forEach((c, idx) => { const fb = len - 1 - idx; c.faceUp = cfg.tableauFaceUpFromBottom === 'all' || fb < (cfg.tableauFaceUpFromBottom as number); }); }
+  for (const c of stock) c.faceUp = false;
   return {
     config: cfg, tableau,
     freeCells: Array.from({ length: cfg.freeCells }, () => null),
     reserves: [], foundations: Array.from({ length: cfg.foundations }, () => []),
-    stock: [], waste: [],
+    stock, waste: [],
     foundationBaseRankResolved: (cfg.foundationBaseRank === 'variable' ? 1 : cfg.foundationBaseRank) as Rank,
     stockRecyclesUsed: 0, tableauRedealsUsed: 0, moveCount: 0, history: [], won: false, lost: false,
   };
