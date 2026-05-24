@@ -10,6 +10,7 @@ import { RefreshCw, Undo2 } from 'lucide-react';
 import type { Card } from './engines/_genericTableau';
 import { createSpider, spiderReducer, isRun, SpiderState } from './spider';
 import { PlayingCard, CardBackView, EmptySlot } from './CardView';
+import { solvableSpider } from './dealLoader';
 
 const GOLD = '#FCD34D'; const BLUE = '#93C5FD'; const FELT = '#0E5A36';
 
@@ -21,7 +22,11 @@ export default function SpiderBoard({ suitMode, label }: { suitMode: 1 | 2 | 4; 
   const liveRef = useRef(st);
   liveRef.current = st;
 
-  const fresh = () => { setSt(createSpider(suitMode)); setSel(null); setHist([]); setSecs(0); };
+  const fresh = () => {
+    const base = createSpider(suitMode);
+    setSt(base); setSel(null); setHist([]); setSecs(0);
+    solvableSpider(`spider-${suitMode}`, base).then((sv) => { if (sv) { setSt(sv); setSel(null); setHist([]); } });
+  };
   useEffect(fresh, [suitMode]);
   useEffect(() => { if (st.won) return; const t = setInterval(() => setSecs((s) => s + 1), 1000); return () => clearInterval(t); }, [st.won]);
 
@@ -58,7 +63,7 @@ export default function SpiderBoard({ suitMode, label }: { suitMode: 1 | 2 | 4; 
 
         <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
           {st.columns.map((pile, col) => (
-            <div key={col} onClick={() => pile.length === 0 && clickCol(col)} style={{ position: 'relative', width: W, minHeight: H, cursor: pile.length === 0 && sel ? 'pointer' : 'default' }}>
+            <div key={col} onClick={() => pile.length === 0 && clickCol(col)} style={{ position: 'relative', width: W, height: pile.length ? cumTop(pile, pile.length - 1) + H : H, cursor: pile.length === 0 && sel ? 'pointer' : 'default' }}>
               {pile.length === 0 && <Empty w={W} h={H} />}
               {pile.map((card, idx) => (
                 <div key={card.id} onClick={(e) => { e.stopPropagation(); clickCard(col, idx); }} style={{ position: 'absolute', top: cumTop(pile, idx), left: 0, cursor: 'pointer' }}>
