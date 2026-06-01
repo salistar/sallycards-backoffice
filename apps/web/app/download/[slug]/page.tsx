@@ -430,6 +430,60 @@ export default function GameDownloadPage({ params }: { params: Promise<{ slug: s
                   </a>
                 )}
               </div>
+
+              {/* Secondary download options — AAB for Play Console + nightly debug APK */}
+              {(game.aabUrl || game.apkDebugUrl) && (
+                <div
+                  style={{
+                    marginTop: '18px',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '12px',
+                    alignItems: 'center',
+                    color: 'rgba(248,250,252,0.65)',
+                    fontSize: '12px',
+                  }}
+                >
+                  {game.aabUrl && (
+                    <a
+                      href={game.aabUrl}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 14px',
+                        borderRadius: '999px',
+                        background: 'rgba(252,211,77,0.10)',
+                        color: C.gold,
+                        textDecoration: 'none',
+                        border: `1px solid ${C.gold}66`,
+                        fontWeight: 700,
+                      }}
+                    >
+                      📦 Signed AAB (Play Store)
+                    </a>
+                  )}
+                  {game.apkDebugUrl && (
+                    <a
+                      href={game.apkDebugUrl}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '8px 14px',
+                        borderRadius: '999px',
+                        background: 'rgba(255,255,255,0.04)',
+                        color: 'rgba(248,250,252,0.85)',
+                        textDecoration: 'none',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        fontWeight: 600,
+                      }}
+                    >
+                      🛠 Nightly debug APK (CI)
+                    </a>
+                  )}
+                </div>
+              )}
             </>
           ) : (
             <div style={{ textAlign: 'center', padding: '20px 0' }}>
