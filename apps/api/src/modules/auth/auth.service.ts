@@ -118,12 +118,16 @@ export class AuthService {
    *
    * Pas de dépendance passport-google-oauth20 — vérification HTTP directe.
    */
-  async loginWithGoogle(idToken: string, gameType: string = 'solitaire', allowGuestFallback = true) {
+  async loginWithGoogle(idToken: string, gameType: string = 'solitaire', allowGuestFallback = false) {
+    // Note: silent guest fallback is DISABLED by default. Falling back silently
+    // to a Guest_xxx account when Google fails is a UX bug — the user thinks
+    // they signed in with Google but their displayed name is "Guest_xxx".
+    // If the caller really wants the fallback (e.g. an explicit "skip Google"
+    // affordance), they must pass allowGuestFallback=true.
     if (!idToken) {
-      // Pas de token → fallback guest direct si autorisé
       if (allowGuestFallback) {
-        this.logger.log('🔐 Google sign-in : pas de token → fallback guest');
-        return this.createGuestSession();
+        this.logger.log('🔐 Google sign-in : pas de token → fallback guest (explicite)');
+        return this.createGuestSession(gameType);
       }
       throw new UnauthorizedException('idToken manquant');
     }
@@ -135,16 +139,18 @@ export class AuthService {
         `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
       );
       if (!res.ok) {
-        throw new Error(`Google tokeninfo HTTP ${res.status}`);
+        const body = await res.text().catch(() => '');
+        throw new Error(`Google tokeninfo HTTP ${res.status} ${body.slice(0, 200)}`);
       }
       payload = await res.json();
     } catch (err: any) {
       this.logger.warn(`Google sign-in : tokeninfo failed - ${err?.message ?? err}`);
-      if (allowGuestFallback) {
-        this.logger.log('🔐 Google sign-in : tokeninfo échec → fallback guest');
-        return this.createGuestSession();
-      }
-      throw new UnauthorizedException('Token Google invalide');
+      // We DELIBERATELY do NOT fallback to guest here, even if allowGuestFallback
+      // is true: the user actually tried to sign in with Google and the verification
+      // failed — we owe them an honest error so they can re-try or report it.
+      throw new UnauthorizedException(
+        `Google sign-in échoué (tokeninfo): ${err?.message ?? 'erreur réseau'}`,
+      );
     }
 
     // Validation des claims essentiels
@@ -157,13 +163,13 @@ export class AuthService {
     }
 
     // Find or create user
+    const googleName = (payload.name || payload.email.split('@')[0]).slice(0, 30);
     let user = await this.usersService.findByEmail(payload.email, gameType);
     if (!user) {
-      const username = (payload.name || payload.email.split('@')[0]).slice(0, 30);
       user = await this.usersService.create(
         {
           email: payload.email,
-          username,
+          username: googleName,
           passwordHash: 'oauth-google-' + randomUUID(), // pas de password réel
           provider: 'google',
           providerId: payload.sub,
@@ -171,9 +177,29 @@ export class AuthService {
         } as any,
         gameType,
       );
-      this.logger.log(`🔐 Google sign-up : ${payload.email} (${gameType})`);
+      this.logger.log(`🔐 Google sign-up : ${payload.email} → "${googleName}" (${gameType})`);
     } else {
-      this.logger.log(`🔐 Google sign-in : ${payload.email}`);
+      // Re-sync displayName / avatar from Google on every sign-in: if the user
+      // was created earlier as a Guest_xxxx (during the old silent-fallback bug)
+      // their username would still be Guest_xxxx. Upgrade it to the real Google
+      // name so the home screen no longer shows "Bienvenue, Guest_xxxx".
+      const needsUpgrade =
+        !user.username ||
+        /^Guest_/.test(user.username) ||
+        user.username === payload.email.split('@')[0];
+      const patch: Record<string, any> = { provider: 'google', providerId: payload.sub };
+      if (needsUpgrade && payload.name) patch.username = googleName;
+      if (payload.picture && !user.avatarUrl) patch.avatarUrl = payload.picture;
+      if (user.isGuest) patch.isGuest = false;
+      try {
+        await this.usersService.update(user._id.toString(), patch as any, gameType);
+        if (patch.username) user.username = patch.username;
+        if (patch.avatarUrl) user.avatarUrl = patch.avatarUrl;
+        if (patch.isGuest === false) user.isGuest = false;
+      } catch (e: any) {
+        this.logger.warn(`Google sign-in upgrade failed for ${payload.email}: ${e?.message}`);
+      }
+      this.logger.log(`🔐 Google sign-in : ${payload.email} → "${user.username}"`);
     }
 
     const tokens = await this.generateTokens(user);
