@@ -54,12 +54,17 @@ for app in APPS:
                 # same as French — likely untranslated
                 issues.append((key, lang, "SAME AS FR"))
     if issues:
-        print(f"\n[{app}] {len(issues)} issues:")
-        # show first 12
-        for (k, lang, kind) in issues[:12]:
-            print(f"   {kind:12} {lang:8} {k}")
-        if len(issues) > 12:
-            print(f"   ... +{len(issues) - 12} more")
+        # group by key (lang list) to give canonical list of untranslated keys
+        by_key = {}
+        for (k, lang, kind) in issues:
+            by_key.setdefault(k, []).append((lang, kind))
+        print(f"\n[{app}] {len(issues)} issues over {len(by_key)} distinct keys:")
+        for k in sorted(by_key):
+            langs = ','.join(f"{l}:{kind}" for l, kind in by_key[k])
+            fr_val = flat.get('fr', {}).get(k, '?')
+            # truncate fr value to 60 chars
+            if len(fr_val) > 60: fr_val = fr_val[:57] + '...'
+            print(f"   {k:40} FR=\"{fr_val}\"  ({langs})")
     else:
         print(f"[{app}] OK")
     problems_total += len(issues)
