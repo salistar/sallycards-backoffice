@@ -187,6 +187,31 @@ export class User {
   @Prop({ default: false })
   isVerified!: boolean;
 
+  /** Sally Coins — soft currency earned in-game, spent on cosmetics + small bonuses */
+  @ApiProperty({ description: 'Sally Coins balance (soft currency)' })
+  @Prop({ default: 0, min: 0 })
+  coins!: number;
+
+  /** Sally Gemmes — premium currency bought IAP OR earned via 7/7 streak */
+  @ApiProperty({ description: 'Sally Gems balance (premium currency)' })
+  @Prop({ default: 0, min: 0 })
+  gems!: number;
+
+  /** Bio libre affichee sur le profil public (max 280 char) */
+  @ApiProperty()
+  @Prop({ default: '', maxlength: 280 })
+  bio!: string;
+
+  /** Provider OAuth (google, apple, local...) — utilise par auth.service */
+  @ApiProperty()
+  @Prop({ default: 'local', enum: ['local', 'google', 'apple', 'guest'] })
+  provider!: string;
+
+  /** ID externe chez le provider OAuth (= sub claim de l'id_token Google) */
+  @ApiProperty()
+  @Prop({ default: '' })
+  providerId!: string;
+
   createdAt!: Date;
   updatedAt!: Date;
 }
