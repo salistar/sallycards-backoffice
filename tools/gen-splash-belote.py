@@ -1,184 +1,284 @@
 # -*- coding: utf-8 -*-
 """
-gen-splash-belote.py - Generate a polished splash screen for Belote.
+gen-splash-belote.py v3 - Ultra-stylish splash (image background + typo dramatique).
 
-Output: apps/mobile/belote/assets/splash.png  (1242x2436, iOS+Android universal)
+Design v3:
+  - RICH IMAGE-LIKE BACKGROUND : multi-layer gradient violet-deep-blue +
+    bokeh light particles + diagonal velvet shimmer + heavy vignette
+  - Three-card fan (Spades / Hearts / Clubs) in the upper center with
+    drop-shadow + soft inner glow
+  - HUGE "SALLY BELOTE" wordmark : double-toned (white + gold) with
+    gold underline accent + soft gold halo
+  - Italic gold-on-velvet tagline "L'art du pli, l'esprit du Maghreb"
+  - Crown emoji + tiny "Salistar Company - sallycards.salistar.com" footer
 
-Design:
-- Deep blue/navy gradient background (matches app primary #2563EB)
-- Subtle radial spotlight at center
-- Hand of 4 fanned cards in the lower-middle (king/queen/jack/ace silhouettes)
-- "Sally" + "Belote" wordmark stacked at top-center
-- Strapline "Bluff · Strategie · Victoire" under the wordmark
-- "Salistar Company" footer
-
-Reused for both monorepo and deploy.
+Output: apps/mobile/belote/assets/splash.png  (1242x2436)
+Also mirrored to apps-deploy/sally-belote/assets/splash.png
 """
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageEnhance
 from pathlib import Path
 import math
 
 W, H = 1242, 2436
 ROOT = Path(r"C:\Users\21266\Desktop\sdk52\SallyCards")
-OUT_MONO = ROOT / "apps" / "mobile" / "belote" / "assets" / "splash.png"
+OUT_MONO   = ROOT / "apps" / "mobile" / "belote" / "assets" / "splash.png"
 OUT_DEPLOY = ROOT / "apps-deploy" / "sally-belote" / "assets" / "splash.png"
 
-# ---------- helpers ----------
+GOLD       = (252, 211, 77)
+GOLD_DEEP  = (212, 175, 55)
+WHITE      = (255, 255, 255)
+NAVY_DEEP  = (4, 8, 32)
+ROYAL      = (40, 80, 200)
+PURPLE     = (90, 30, 140)
+
 
 def load_font(size, bold=True):
-    for fn in (["segoeuib.ttf","arialbd.ttf","calibrib.ttf"] if bold
-               else ["segoeui.ttf","arial.ttf","calibri.ttf"]):
+    candidates = (
+        ["segoeuib.ttf", "arialbd.ttf", "calibrib.ttf"] if bold
+        else ["segoeui.ttf", "arial.ttf", "calibri.ttf"]
+    )
+    for fn in candidates:
         try: return ImageFont.truetype(fn, size)
         except Exception: continue
     return ImageFont.load_default()
 
 
-def linear_gradient(size, c_top, c_bot):
-    img = Image.new("RGB", size, c_top)
+def make_background():
+    """Multi-layer rich background: radial royal-purple gradient + bokeh + velvet."""
+    base = Image.new("RGB", (W, H), NAVY_DEEP)
+    px = base.load()
+    # radial gradient
+    cx, cy = W // 2, int(H * 0.38)
+    max_r = math.hypot(max(cx, W - cx), max(cy, H - cy))
+    for y in range(H):
+        for x in range(W):
+            r = math.hypot(x - cx, y - cy)
+            t = min(1.0, (r / max_r) ** 1.25)
+            # 3-stop: ROYAL -> PURPLE -> NAVY_DEEP
+            if t < 0.55:
+                k = t / 0.55
+                c1, c2 = ROYAL, PURPLE
+            else:
+                k = (t - 0.55) / 0.45
+                c1, c2 = PURPLE, NAVY_DEEP
+            r0 = int(c1[0] + (c2[0] - c1[0]) * k)
+            g0 = int(c1[1] + (c2[1] - c1[1]) * k)
+            b0 = int(c1[2] + (c2[2] - c1[2]) * k)
+            px[x, y] = (r0, g0, b0)
+    base = base.convert("RGBA")
+
+    # Velvet diagonal shimmer (subtle)
+    shimmer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(shimmer)
+    for i in range(-W, W * 2, 80):
+        sd.line([(i, 0), (i + H, H)], fill=(255, 255, 255, 6), width=2)
+    base = Image.alpha_composite(base, shimmer)
+
+    # Bokeh particles (gold dots, varying sizes, gaussian blur)
+    bokeh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    bd = ImageDraw.Draw(bokeh)
+    import random
+    random.seed(42)
+    for _ in range(80):
+        x = random.randint(0, W)
+        y = random.randint(0, H)
+        r = random.randint(8, 40)
+        a = random.randint(35, 110)
+        bd.ellipse([x - r, y - r, x + r, y + r], fill=(255, 230, 150, a))
+    bokeh = bokeh.filter(ImageFilter.GaussianBlur(radius=18))
+    base = Image.alpha_composite(base, bokeh)
+
+    # Big suit silhouettes in corners (very subtle)
+    suit_font = load_font(620, bold=True)
+    layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ld = ImageDraw.Draw(layer)
+    for (txt, pos, alpha) in [
+        ("♠", (-100,  80), 18),       # spade top-left
+        ("♥", (W - 540, H - 760), 22), # heart bottom-right
+        ("♣", (W - 600, 60),  16),     # club  top-right
+        ("♦", (-80, H - 800), 22),     # diamond bottom-left
+    ]:
+        ld.text(pos, txt, font=suit_font, fill=(255, 255, 255, alpha))
+    base = Image.alpha_composite(base, layer)
+
+    # Vignette (heavy bottom + corner darken)
+    vign = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    vd = ImageDraw.Draw(vign)
+    for y in range(H):
+        a = int(min(160, max(0, (y - H * 0.55) * 0.6)))
+        vd.line([(0, y), (W, y)], fill=(0, 0, 0, a))
+    base = Image.alpha_composite(base, vign)
+
+    return base
+
+
+def draw_glossy_card(suit, fill_color, w=480, h=680, angle=0):
+    """A single playing card with rounded corners + suit, ready to paste rotated."""
+    img = Image.new("RGBA", (w + 60, h + 60), (0, 0, 0, 0))
+    # drop shadow
+    sh = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    ImageDraw.Draw(sh).rounded_rectangle(
+        [30, 40, w + 30, h + 40], radius=int(w * 0.08), fill=(0, 0, 0, 160))
+    sh = sh.filter(ImageFilter.GaussianBlur(radius=18))
+    img.alpha_composite(sh)
+    # card body
     d = ImageDraw.Draw(img)
-    w, h = size
-    for y in range(h):
-        t = y / (h - 1)
-        r = int(c_top[0] + (c_bot[0] - c_top[0]) * t)
-        g = int(c_top[1] + (c_bot[1] - c_top[1]) * t)
-        b = int(c_top[2] + (c_bot[2] - c_top[2]) * t)
-        d.line([(0, y), (w, y)], fill=(r, g, b))
+    d.rounded_rectangle([30, 30, w + 30, h + 30],
+                        radius=int(w * 0.08),
+                        fill=(252, 252, 248, 255),
+                        outline=(20, 30, 60, 255), width=5)
+    # corner suit (small)
+    f_small = load_font(int(h * 0.10), bold=True)
+    d.text((54, 50),     suit, font=f_small, fill=fill_color + (255,))
+    # bottom-right rotated small suit
+    sr = Image.new("RGBA", (160, 200), (0, 0, 0, 0))
+    ImageDraw.Draw(sr).text((10, 10), suit, font=f_small, fill=fill_color + (255,))
+    sr = sr.rotate(180, resample=Image.BICUBIC)
+    img.alpha_composite(sr, (w - 100, h - 130))
+    # big center suit
+    f_big = load_font(int(h * 0.50), bold=True)
+    bbox = d.textbbox((0, 0), suit, font=f_big)
+    bw, bh = bbox[2] - bbox[0], bbox[3] - bbox[1]
+    d.text(((img.width - bw) // 2 - bbox[0],
+            (img.height - bh) // 2 - bbox[1] - 14),
+           suit, font=f_big, fill=fill_color + (255,))
+    # glossy diagonal highlight
+    gloss = Image.new("RGBA", img.size, (0, 0, 0, 0))
+    gd = ImageDraw.Draw(gloss)
+    gd.polygon([(50, 35), (220, 35), (140, h + 25), (40, h + 25)],
+               fill=(255, 255, 255, 28))
+    gloss = gloss.filter(ImageFilter.GaussianBlur(radius=8))
+    img.alpha_composite(gloss)
+    # rotate
+    if angle:
+        img = img.rotate(angle, resample=Image.BICUBIC, expand=True)
     return img
 
 
-def radial_glow(size, center, radius, color, max_alpha=120):
-    w, h = size
-    glow = Image.new("RGBA", size, (0, 0, 0, 0))
-    d = ImageDraw.Draw(glow)
-    cx, cy = center
-    # cheap radial: concentric ellipses with decreasing alpha
-    for r in range(radius, 0, -8):
-        a = int(max_alpha * (1 - r / radius) ** 1.6)
-        d.ellipse([cx - r, cy - r, cx + r, cy + r],
-                  fill=(color[0], color[1], color[2], a))
-    return glow.filter(ImageFilter.GaussianBlur(radius=30))
+def draw_glossy_text(text, font, fill, glow_color, glow_radius=20):
+    """Render `text` with a soft outer glow then the gloss fill."""
+    bbox_dummy = ImageDraw.Draw(Image.new("RGBA", (10, 10))).textbbox((0, 0), text, font=font)
+    tw, th = bbox_dummy[2] - bbox_dummy[0], bbox_dummy[3] - bbox_dummy[1]
+    pad = glow_radius * 2
+    layer = Image.new("RGBA", (tw + pad * 2, th + pad * 2), (0, 0, 0, 0))
+    # glow pass
+    glow = Image.new("RGBA", layer.size, (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    gd.text((pad - bbox_dummy[0], pad - bbox_dummy[1]), text, font=font,
+            fill=glow_color + (180,))
+    glow = glow.filter(ImageFilter.GaussianBlur(radius=glow_radius))
+    layer.alpha_composite(glow)
+    # text shadow (subtle dark)
+    sd = ImageDraw.Draw(layer)
+    sd.text((pad - bbox_dummy[0] + 4, pad - bbox_dummy[1] + 6), text,
+            font=font, fill=(0, 0, 0, 180))
+    # main fill
+    d = ImageDraw.Draw(layer)
+    d.text((pad - bbox_dummy[0], pad - bbox_dummy[1]), text, font=font,
+           fill=fill + (255,))
+    return layer, tw, th, pad
 
-
-def draw_card(img, cx, cy, angle_deg, w, h, fill, border=(255,255,255), suit=None):
-    """Draw a stylized card (rounded rect) rotated around (cx, cy)."""
-    card = Image.new("RGBA", (w + 60, h + 60), (0, 0, 0, 0))
-    cd = ImageDraw.Draw(card)
-    # card body
-    cd.rounded_rectangle([30, 30, w + 30, h + 30], radius=int(w * 0.10),
-                         fill=fill, outline=border, width=6)
-    # inner decoration: corner indices + center suit
-    if suit:
-        # corner top-left
-        f_small = load_font(int(w * 0.18), bold=True)
-        cd.text((52, 50), suit, font=f_small, fill=border)
-        # corner bottom-right (rotated)
-        f_med = load_font(int(w * 0.50), bold=True)
-        bbox = cd.textbbox((0, 0), suit, font=f_med)
-        tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-        cd.text(((w + 60 - tw) // 2, (h + 60 - th) // 2 - 20),
-                suit, font=f_med, fill=border)
-    # shadow underneath
-    shadow = Image.new("RGBA", card.size, (0, 0, 0, 0))
-    sd = ImageDraw.Draw(shadow)
-    sd.rounded_rectangle([35, 40, w + 35, h + 40], radius=int(w * 0.10),
-                         fill=(0, 0, 0, 90))
-    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=12))
-    # rotate both
-    card = card.rotate(angle_deg, resample=Image.BICUBIC, expand=True)
-    shadow = shadow.rotate(angle_deg, resample=Image.BICUBIC, expand=True)
-    # paste centered
-    px = cx - card.width // 2
-    py = cy - card.height // 2
-    img.alpha_composite(shadow, (px + 8, py + 12))
-    img.alpha_composite(card, (px, py))
-
-
-# ---------- main ----------
 
 def main():
-    # Background
-    bg = linear_gradient((W, H), (37, 99, 235), (10, 20, 50))   # #2563EB -> deep navy
-    base = bg.convert("RGBA")
+    bg = make_background()
 
-    # Spotlight glow behind the card fan
-    glow = radial_glow((W, H), (W // 2, int(H * 0.62)),
-                       radius=800, color=(120, 180, 255), max_alpha=70)
-    base = Image.alpha_composite(base, glow)
+    # ----- 3-card fan in the upper-middle -----
+    cards_y = int(H * 0.30)
+    cards_x = W // 2
 
-    # Decorative suit watermarks (very subtle, in corners)
-    df = ImageDraw.Draw(base)
-    big_font = load_font(500, bold=True)
-    for (txt, pos, alpha) in [
-        ("♠", (-60, 80),  18),       # spade top-left
-        ("♥", (W - 420, H - 600), 16), # heart bottom-right
-        ("♣", (W - 480, 60),  14),    # club top-right
-        ("♦", (-40, H - 620), 16),    # diamond bottom-left
-    ]:
-        wm = Image.new("RGBA", (520, 520), (0, 0, 0, 0))
-        wd = ImageDraw.Draw(wm)
-        wd.text((0, 0), txt, font=big_font, fill=(255, 255, 255, alpha))
-        base.alpha_composite(wm, pos)
+    spade  = draw_glossy_card("♠", (12, 22, 60),   w=520, h=720, angle=-12)
+    heart  = draw_glossy_card("♥", (155, 25, 35),  w=560, h=760, angle=0)
+    club   = draw_glossy_card("♣", (12, 22, 60),   w=520, h=720, angle=12)
 
-    # Wordmark top
-    title_font_sally  = load_font(160, bold=True)
-    title_font_belote = load_font(220, bold=True)
-    tagline_font      = load_font(60, bold=True)
-    footer_font       = load_font(46, bold=False)
+    # paste left-spade, then right-club (behind), then heart (front)
+    bg.alpha_composite(spade, (cards_x - spade.width // 2 - 220, cards_y - spade.height // 2 + 30))
+    bg.alpha_composite(club,  (cards_x - club.width  // 2 + 220, cards_y - club.height  // 2 + 30))
+    bg.alpha_composite(heart, (cards_x - heart.width // 2, cards_y - heart.height // 2))
 
-    df = ImageDraw.Draw(base)
-
-    # "SALLY"
-    txt = "SALLY"
-    bbox = df.textbbox((0, 0), txt, font=title_font_sally)
+    # 3 gold stars accent above the cards (Segoe Symbol is widely supported)
+    star_font = None
+    for fn in ("seguisym.ttf", "arial.ttf", "segoeuib.ttf"):
+        try:
+            star_font = ImageFont.truetype(fn, 180)
+            break
+        except Exception:
+            continue
+    if star_font is None:
+        star_font = load_font(180, bold=True)
+    d = ImageDraw.Draw(bg)
+    stars_txt = "★ ★ ★"
+    bbox = d.textbbox((0, 0), stars_txt, font=star_font)
     tw = bbox[2] - bbox[0]
-    df.text(((W - tw) // 2, 360), txt, font=title_font_sally,
-            fill=(255, 255, 255, 230))
-    # "BELOTE"
-    txt = "BELOTE"
-    bbox = df.textbbox((0, 0), txt, font=title_font_belote)
+    # gold halo
+    halo = Image.new("RGBA", (tw + 200, 280), (0, 0, 0, 0))
+    ImageDraw.Draw(halo).text((100 - bbox[0], 50 - bbox[1]), stars_txt,
+                              font=star_font, fill=GOLD + (140,))
+    halo = halo.filter(ImageFilter.GaussianBlur(radius=22))
+    bg.alpha_composite(halo, ((W - halo.width) // 2, cards_y - 800))
+    # the stars themselves
+    d.text(((W - tw) // 2, cards_y - 750), stars_txt, font=star_font, fill=GOLD + (255,))
+
+    # ----- Wordmark "SALLY BELOTE" -----
+    sally_font  = load_font(140, bold=True)
+    belote_font = load_font(220, bold=True)
+
+    # SALLY (white with soft cyan glow)
+    layer, tw, th, pad = draw_glossy_text("SALLY", sally_font, WHITE, (140, 200, 255), glow_radius=18)
+    bg.alpha_composite(layer, ((W - tw) // 2 - pad, int(H * 0.62) - pad))
+
+    # BELOTE (gold with warm halo)
+    layer, tw, th, pad = draw_glossy_text("BELOTE", belote_font, GOLD, (252, 211, 77), glow_radius=30)
+    by = int(H * 0.66)
+    bg.alpha_composite(layer, ((W - tw) // 2 - pad, by - pad))
+
+    # Gold underline accent under BELOTE
+    d = ImageDraw.Draw(bg)
+    underline_w = int(tw * 0.55)
+    ux1 = (W - underline_w) // 2
+    uy  = by + th + 35
+    d.rounded_rectangle([ux1, uy, ux1 + underline_w, uy + 8], radius=4, fill=GOLD + (255,))
+
+    # Tagline italic-looking
+    sub_font = load_font(46, bold=True)
+    txt = "L'art du pli  -  L'esprit du Maghreb"
+    bbox = d.textbbox((0, 0), txt, font=sub_font)
     tw = bbox[2] - bbox[0]
-    # text shadow first
-    df.text(((W - tw) // 2 + 6, 520 + 6), txt, font=title_font_belote, fill=(0, 0, 0, 140))
-    df.text(((W - tw) // 2, 520), txt, font=title_font_belote, fill=(252, 211, 77))   # gold accent
+    d.text(((W - tw) // 2, uy + 36), txt, font=sub_font, fill=(220, 230, 255, 230))
 
-    # Tagline
-    txt = "BLUFF · STRATEGIE · VICTOIRE"
-    bbox = df.textbbox((0, 0), txt, font=tagline_font)
+    # Suit chips row (small)
+    chip_font = load_font(56, bold=True)
+    chips = ["♠", "♥", "♣", "♦"]
+    chip_colors = [(20, 30, 60), (200, 30, 30), (20, 30, 60), (200, 30, 30)]
+    chip_w = 90
+    total_w = chip_w * 4 + 18 * 3
+    sx = (W - total_w) // 2
+    for i, (c, col) in enumerate(zip(chips, chip_colors)):
+        x = sx + i * (chip_w + 18)
+        y = uy + 130
+        # gold chip
+        ImageDraw.Draw(bg).rounded_rectangle(
+            [x, y, x + chip_w, y + chip_w],
+            radius=18, fill=(252, 250, 240, 240),
+            outline=GOLD + (255,), width=3)
+        # suit char centered
+        cbox = ImageDraw.Draw(bg).textbbox((0, 0), c, font=chip_font)
+        cw, ch = cbox[2] - cbox[0], cbox[3] - cbox[1]
+        ImageDraw.Draw(bg).text(
+            (x + (chip_w - cw) // 2 - cbox[0],
+             y + (chip_w - ch) // 2 - cbox[1] - 4),
+            c, font=chip_font, fill=col + (255,))
+
+    # ----- Footer -----
+    foot_font = load_font(34, bold=False)
+    txt = "Salistar Company  -  sallycards.salistar.com"
+    bbox = d.textbbox((0, 0), txt, font=foot_font)
     tw = bbox[2] - bbox[0]
-    df.text(((W - tw) // 2, 800), txt, font=tagline_font,
-            fill=(180, 210, 255, 230))
+    d.text(((W - tw) // 2, H - 120), txt, font=foot_font, fill=(255, 255, 255, 170))
 
-    # Fanned hand of 4 cards
-    cy = int(H * 0.62)
-    cx = W // 2
-    card_w, card_h = 420, 600
-    spread = 90    # px gap
-    spec = [
-        (-18, "♠", (8, 26, 70)),      # spade (left-most, navy)
-        (-6,  "♥", (155, 25, 25)),    # heart (red)
-        (6,   "♣", (8, 26, 70)),      # club  (navy)
-        (18,  "♦", (155, 25, 25)),    # diamond (red)
-    ]
-    for i, (angle, suit, accent) in enumerate(spec):
-        x = int(cx + (i - 1.5) * spread)
-        y = int(cy + abs(i - 1.5) * 14)
-        draw_card(base, x, y,
-                  angle_deg=angle, w=card_w, h=card_h,
-                  fill=(255, 255, 255, 255),
-                  border=accent, suit=suit)
-
-    # Footer
-    txt = "Salistar Company · sallycards.salistar.com"
-    bbox = df.textbbox((0, 0), txt, font=footer_font)
-    tw = bbox[2] - bbox[0]
-    df.text(((W - tw) // 2, H - 160), txt, font=footer_font,
-            fill=(255, 255, 255, 180))
-
-    base.convert("RGB").save(OUT_MONO, "PNG", optimize=True)
-    print(f"OK -> {OUT_MONO}  ({OUT_MONO.stat().st_size//1024} KB)")
-    # mirror to deploy repo
-    base.convert("RGB").save(OUT_DEPLOY, "PNG", optimize=True)
-    print(f"OK -> {OUT_DEPLOY}  ({OUT_DEPLOY.stat().st_size//1024} KB)")
+    bg.convert("RGB").save(OUT_MONO, "PNG", optimize=True)
+    print(f"OK -> {OUT_MONO}  ({OUT_MONO.stat().st_size // 1024} KB)")
+    bg.convert("RGB").save(OUT_DEPLOY, "PNG", optimize=True)
+    print(f"OK -> {OUT_DEPLOY}  ({OUT_DEPLOY.stat().st_size // 1024} KB)")
 
 
 if __name__ == "__main__":
