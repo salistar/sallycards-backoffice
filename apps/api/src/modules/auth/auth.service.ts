@@ -189,13 +189,13 @@ export class AuthService {
         user.username === payload.email.split('@')[0];
       const patch: Record<string, any> = { provider: 'google', providerId: payload.sub };
       if (needsUpgrade && payload.name) patch.username = googleName;
-      if (payload.picture && !user.avatarUrl) patch.avatarUrl = payload.picture;
-      if (user.isGuest) patch.isGuest = false;
+      if (payload.picture && !(user as any).avatar) patch.avatar = payload.picture;
+      if ((user as any).isGuest) patch.isGuest = false;
       try {
         await this.usersService.update(user._id.toString(), patch as any, gameType);
         if (patch.username) user.username = patch.username;
-        if (patch.avatarUrl) user.avatarUrl = patch.avatarUrl;
-        if (patch.isGuest === false) user.isGuest = false;
+        if (patch.avatar) (user as any).avatar = patch.avatar;
+        if (patch.isGuest === false) (user as any).isGuest = false;
       } catch (e: any) {
         this.logger.warn(`Google sign-in upgrade failed for ${payload.email}: ${e?.message}`);
       }
