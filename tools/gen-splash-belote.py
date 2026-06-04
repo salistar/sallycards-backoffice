@@ -44,48 +44,38 @@ def load_font(size, bold=True):
 
 
 def make_background():
-    """Multi-layer rich background: radial royal-purple gradient + bokeh + velvet."""
-    base = Image.new("RGB", (W, H), NAVY_DEEP)
-    px = base.load()
-    # radial gradient
-    cx, cy = W // 2, int(H * 0.38)
-    max_r = math.hypot(max(cx, W - cx), max(cy, H - cy))
-    for y in range(H):
-        for x in range(W):
-            r = math.hypot(x - cx, y - cy)
-            t = min(1.0, (r / max_r) ** 1.25)
-            # 3-stop: ROYAL -> PURPLE -> NAVY_DEEP
-            if t < 0.55:
-                k = t / 0.55
-                c1, c2 = ROYAL, PURPLE
-            else:
-                k = (t - 0.55) / 0.45
-                c1, c2 = PURPLE, NAVY_DEEP
-            r0 = int(c1[0] + (c2[0] - c1[0]) * k)
-            g0 = int(c1[1] + (c2[1] - c1[1]) * k)
-            b0 = int(c1[2] + (c2[2] - c1[2]) * k)
-            px[x, y] = (r0, g0, b0)
-    base = base.convert("RGBA")
+    """Background v4: SOLID NAVY matching app.json backgroundColor #0A1535 exactly.
+    This way, even if Android's splash plugin uses resizeMode=contain (legacy)
+    or scales the image, the area around the centered content is INVISIBLY
+    filled by the matching bg color. NO hard cutoff lines.
+    """
+    BG = (10, 21, 53)  # = #0A1535 exact match with app.json backgroundColor
+    base = Image.new("RGBA", (W, H), BG + (255,))
 
-    # Velvet diagonal shimmer (subtle)
-    shimmer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    sd = ImageDraw.Draw(shimmer)
-    for i in range(-W, W * 2, 80):
-        sd.line([(i, 0), (i + H, H)], fill=(255, 255, 255, 6), width=2)
-    base = Image.alpha_composite(base, shimmer)
+    # Subtle radial highlight at the cards' position (so center has some life)
+    glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(glow)
+    cx, cy = W // 2, int(H * 0.42)
+    # series of fading ellipses
+    for r in range(820, 0, -40):
+        a = int(28 * (1 - r / 820) ** 1.5)
+        gd.ellipse([cx - r, cy - r, cx + r, cy + r],
+                   fill=(60, 110, 220, a))
+    glow = glow.filter(ImageFilter.GaussianBlur(radius=80))
+    base = Image.alpha_composite(base, glow)
 
-    # Bokeh particles (gold dots, varying sizes, gaussian blur)
+    # Subtle bokeh particles (just a few, blurred)
     bokeh = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     bd = ImageDraw.Draw(bokeh)
     import random
     random.seed(42)
-    for _ in range(80):
+    for _ in range(35):
         x = random.randint(0, W)
         y = random.randint(0, H)
-        r = random.randint(8, 40)
-        a = random.randint(35, 110)
+        r = random.randint(10, 35)
+        a = random.randint(20, 60)
         bd.ellipse([x - r, y - r, x + r, y + r], fill=(255, 230, 150, a))
-    bokeh = bokeh.filter(ImageFilter.GaussianBlur(radius=18))
+    bokeh = bokeh.filter(ImageFilter.GaussianBlur(radius=22))
     base = Image.alpha_composite(base, bokeh)
 
     # Big suit silhouettes in corners (very subtle)
@@ -93,22 +83,13 @@ def make_background():
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     ld = ImageDraw.Draw(layer)
     for (txt, pos, alpha) in [
-        ("♠", (-100,  80), 18),       # spade top-left
-        ("♥", (W - 540, H - 760), 22), # heart bottom-right
-        ("♣", (W - 600, 60),  16),     # club  top-right
-        ("♦", (-80, H - 800), 22),     # diamond bottom-left
+        ("♠", (-100,  80), 10),
+        ("♥", (W - 540, H - 760), 12),
+        ("♣", (W - 600, 60),  9),
+        ("♦", (-80, H - 800), 12),
     ]:
         ld.text(pos, txt, font=suit_font, fill=(255, 255, 255, alpha))
     base = Image.alpha_composite(base, layer)
-
-    # Vignette (heavy bottom + corner darken)
-    vign = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    vd = ImageDraw.Draw(vign)
-    for y in range(H):
-        a = int(min(160, max(0, (y - H * 0.55) * 0.6)))
-        vd.line([(0, y), (W, y)], fill=(0, 0, 0, a))
-    base = Image.alpha_composite(base, vign)
-
     return base
 
 
